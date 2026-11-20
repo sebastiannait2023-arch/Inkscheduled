@@ -710,7 +710,7 @@
       .input-row {
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 6px;
       }
 
       .quick-input {
@@ -732,13 +732,40 @@
         font-weight: 600;
       }
 
+      .voice-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 46px;
+        min-width: 46px;
+        height: 46px;
+        padding: 0;
+        border: 2px solid var(--border);
+        border-radius: 8px;
+        background: var(--bg);
+        color: var(--fg);
+        flex-shrink: 0;
+      }
+
+      .voice-btn:active {
+        background: var(--inv-bg);
+        color: var(--inv-fg);
+      }
+
+      .voice-btn.is-listening {
+        background: var(--urgent);
+        border-color: var(--urgent);
+        color: #ffffff;
+      }
+
       .add-btn {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 52px;
-        min-width: 52px;
+        width: 46px;
+        min-width: 46px;
         height: 46px;
+        padding: 0;
         border: 2px solid var(--border);
         border-radius: 8px;
         background: var(--inv-bg);
@@ -1082,6 +1109,14 @@
             maxlength="140"
             aria-label="Nuevo recordatorio"
           />
+          <button type="button" class="voice-btn" id="voiceBtn" aria-label="Dictar recordatorio por voz" title="Dictar por voz">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="9" y="2.5" width="6" height="10.5" rx="3" fill="currentColor" stroke="none"/>
+              <path d="M5 10.5a7 7 0 0 0 14 0"/>
+              <line x1="12" y1="17.5" x2="12" y2="21"/>
+              <line x1="8.5" y1="21" x2="15.5" y2="21"/>
+            </svg>
+          </button>
           <button type="submit" class="add-btn" id="addBtn" aria-label="Guardar recordatorio">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="square" aria-hidden="true">
               <line x1="12" y1="4" x2="12" y2="20"/>
@@ -1504,6 +1539,109 @@
           return nativeSyncPromise;
         }
 
+        function getTintaNativePlugin() {
+          const cap = window.Capacitor;
+          if (!cap) return null;
+          const isNative = typeof cap.isNativePlatform === 'function' ? cap.isNativePlatform() : Boolean(cap.isNative);
+          if (!isNative) return null;
+          return (cap.Plugins && cap.Plugins.TintaNative) || null;
+        }
+
+        function syncWidgetToNative() {
+          const TintaNative = getTintaNativePlugin();
+          if (!TintaNative || typeof TintaNative.syncWidgetState !== 'function') return;
+          try {
+            const activeTasks = sortTasks(state.tasks.filter((t) => !t.done));
+            const compact = activeTasks.slice(0, 20).map((t) => ({
+              id: t.id,
+              title: t.title,
+              section: t.section,
+              dueDate: t.dueDate || '',
+              dueTime: t.dueTime || '',
+              category: t.category || 'none',
+              priority: Boolean(t.priority)
+            }));
+            TintaNative.syncWidgetState({
+              tasksJson: JSON.stringify(compact),
+              activeCount: activeTasks.length
+            }).catch(() => {});
+          } catch (_) {
+            // Ignore widget sync errors
+          }
+        }
+
+        function applyTaskCompletionInternal(id, completedAtMs) {
+          const idx = state.tasks.findIndex((t) => t.id === id);
+          if (idx === -1) return false;
+          const task = state.tasks[idx];
+          if (task.done) return false;
+          const now = typeof completedAtMs === 'number' ? completedAtMs : Date.now();
+          task.done = true;
+          task.completedAt = now;
+
+          if (!Array.isArray(state.completionLog)) state.completionLog = [];
+          state.completionLog.push({
+            id: task.id,
+            category: CATEGORIES.includes(task.category) ? task.category : 'none',
+            completedAt: now
+          });
+          state.completionLog = pruneLog(state.completionLog);
+
+          if (task.repeat && task.repeat !== 'none') {
+            const baseDate = task.dueDate || todayISO();
+            let nextDate = baseDate;
+            if (task.repeat === 'daily') nextDate = addDaysISO(baseDate, 1);
+            if (task.repeat === 'weekly') nextDate = addDaysISO(baseDate, 7);
+            if (task.repeat === 'monthly') nextDate = addMonthsISO(baseDate, 1);
+
+            state.tasks.push({
+              id: uid(),
+              title: task.title,
+              section: task.section,
+              dueDate: nextDate,
+              dueTime: task.dueTime || '',
+              category: task.category || 'none',
+              priority: Boolean(task.priority),
+              repeat: task.repeat,
+              done: false,
+              completedAt: null,
+              createdAt: Date.now()
+            });
+          }
+          return true;
+        }
+
+        async function consumeNativeWidgetBridge() {
+          const TintaNative = getTintaNativePlugin();
+          if (!TintaNative) return;
+          try {
+            if (typeof TintaNative.consumePendingCompletions === 'function') {
+              const res = await TintaNative.consumePendingCompletions();
+              const list = res && Array.isArray(res.completions) ? res.completions : [];
+              let changed = false;
+              list.forEach((item) => {
+                if (item && item.id && applyTaskCompletionInternal(item.id, item.completedAt)) {
+                  changed = true;
+                }
+              });
+              if (changed) {
+                saveState();
+                renderAll();
+              } else {
+                syncWidgetToNative();
+              }
+            }
+            if (typeof TintaNative.consumePendingAction === 'function') {
+              const actRes = await TintaNative.consumePendingAction();
+              if (actRes && actRes.action) {
+                handleWidgetLaunchAction(actRes.action);
+              }
+            }
+          } catch (_) {
+            // Ignore bridge errors
+          }
+        }
+
         function saveState() {
           try {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -1512,6 +1650,7 @@
           }
           updateAppBadge();
           syncNativeNotifications();
+          syncWidgetToNative();
         }
 
         function updateAppBadge() {
@@ -1791,19 +1930,25 @@
             return { cleanTitle: '', priority, detectedCat, detectedSection, detectedTime };
           }
 
-          // 1. Urgency via leading or trailing standalone "!"
+          // 1. Urgency via leading/trailing "!" or spoken leading "urgente"
           if (/^!\s+/.test(text)) {
             priority = true;
             text = text.replace(/^!\s+/, '');
           } else if (/^!([^\s!].*)$/.test(text)) {
             priority = true;
             text = text.replace(/^!/, '');
+          } else if (/^urgente\s+/i.test(text)) {
+            priority = true;
+            text = text.replace(/^urgente\s+/i, '');
           }
           if (/\s+!$/.test(text)) {
             priority = true;
             text = text.replace(/\s+!$/, '');
           }
           text = text.trim();
+
+          // Normalize spoken "a. m." / "p. m." into "am" / "pm"
+          text = text.replace(/\ba\.\s*m\.?(?=\s|$|[.,])/gi, 'am').replace(/\bp\.\s*m\.?(?=\s|$|[.,])/gi, 'pm');
 
           // 2. Category prefix (t:, p:, s:, r:)
           const prefixMap = { t: 'trabajo', p: 'personal', s: 'salud', r: 'recados' };
@@ -2786,6 +2931,164 @@
           });
         }
 
+        // Voice-to-Text Capture (Native Android APK + Browser Web Speech API)
+        let activeSpeechRec = null;
+        let isVoiceListening = false;
+
+        function setVoiceListeningUI(listening, statusMessage) {
+          isVoiceListening = listening;
+          const btn = document.getElementById('voiceBtn');
+          const previewEl = document.getElementById('smartPreview');
+          btn.classList.toggle('is-listening', listening);
+          btn.setAttribute('aria-pressed', listening ? 'true' : 'false');
+          if (listening) {
+            previewEl.innerHTML = `<span class="smart-tag smart-urgent">● ${escapeText(statusMessage || 'Escuchando... habla ahora')}</span>`;
+            previewEl.classList.remove('hidden');
+          } else if (statusMessage) {
+            previewEl.innerHTML = `<span class="smart-tag">${escapeText(statusMessage)}</span>`;
+            previewEl.classList.remove('hidden');
+          } else {
+            renderSmartPreview();
+          }
+        }
+
+        function submitQuickDraftFromVoice(transcript) {
+          const input = document.getElementById('quickInput');
+          input.value = transcript;
+          renderSmartPreview();
+          const prevSnapshot = {
+            tasks: JSON.parse(JSON.stringify(state.tasks)),
+            completionLog: JSON.parse(JSON.stringify(state.completionLog || []))
+          };
+          addQuickTask({ preventDefault() {} });
+          const created = state.tasks[0];
+          if (created) {
+            showUndo(`Añadido por voz: ${created.title.slice(0, 24)}`, prevSnapshot);
+          }
+        }
+
+        async function startVoiceCapture(autoSubmit) {
+          if (isVoiceListening && activeSpeechRec) {
+            try { activeSpeechRec.stop(); } catch (_) {}
+            return;
+          }
+
+          const TintaNative = getTintaNativePlugin();
+          if (TintaNative && typeof TintaNative.startVoiceInput === 'function') {
+            setVoiceListeningUI(true, 'Abriendo dictado por voz...');
+            try {
+              const res = await TintaNative.startVoiceInput();
+              setVoiceListeningUI(false, '');
+              if (res && res.unavailable) {
+                setVoiceListeningUI(false, 'Instala Servicios de Voz de Google en tu Bigme para usar dictado');
+                return;
+              }
+              const spoken = res && typeof res.text === 'string' ? res.text.trim() : '';
+              if (!spoken) return;
+              if (autoSubmit) {
+                submitQuickDraftFromVoice(spoken);
+              } else {
+                const input = document.getElementById('quickInput');
+                input.value = spoken;
+                renderSmartPreview();
+                input.focus();
+              }
+            } catch (_) {
+              setVoiceListeningUI(false, '');
+            }
+            return;
+          }
+
+          const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+          if (!SpeechRec) {
+            setVoiceListeningUI(false, 'Dictado de voz no compatible en este navegador');
+            return;
+          }
+
+          const rec = new SpeechRec();
+          activeSpeechRec = rec;
+          rec.lang = 'es-ES';
+          rec.interimResults = true;
+          rec.maxAlternatives = 1;
+          rec.continuous = false;
+
+          let finalTranscript = '';
+          setVoiceListeningUI(true, 'Escuchando en español...');
+
+          rec.onresult = (event) => {
+            let interim = '';
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+              const piece = event.results[i][0].transcript;
+              if (event.results[i].isFinal) {
+                finalTranscript += (finalTranscript ? ' ' : '') + piece;
+              } else {
+                interim += piece;
+              }
+            }
+            const combined = (finalTranscript || interim).trim();
+            if (combined) {
+              document.getElementById('quickInput').value = combined;
+              renderSmartPreview();
+            }
+          };
+
+          rec.onerror = () => {
+            activeSpeechRec = null;
+            setVoiceListeningUI(false, 'No se pudo captar audio');
+          };
+
+          rec.onend = () => {
+            activeSpeechRec = null;
+            const text = (finalTranscript || document.getElementById('quickInput').value || '').trim();
+            setVoiceListeningUI(false, '');
+            if (text && autoSubmit) {
+              submitQuickDraftFromVoice(text);
+            } else if (text) {
+              document.getElementById('quickInput').focus();
+            }
+          };
+
+          try {
+            rec.start();
+          } catch (_) {
+            activeSpeechRec = null;
+            setVoiceListeningUI(false, '');
+          }
+        }
+
+        function handleWidgetLaunchAction(action) {
+          if (!action) return;
+          document.getElementById('editSheet').classList.add('hidden');
+          document.getElementById('settingsSheet').classList.add('hidden');
+          document.getElementById('reportSheet').classList.add('hidden');
+
+          if (action === 'quick_type') {
+            const input = document.getElementById('quickInput');
+            setTimeout(() => {
+              input.focus();
+            }, 120);
+          } else if (action === 'quick_voice') {
+            setTimeout(() => {
+              startVoiceCapture(true);
+            }, 160);
+          }
+        }
+
+        document.getElementById('voiceBtn').addEventListener('click', () => {
+          startVoiceCapture(false);
+        });
+
+        window.addEventListener('tintaWidgetAction', (e) => {
+          const action = e && e.detail ? e.detail.action : null;
+          if (action) handleWidgetLaunchAction(action);
+        });
+
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') {
+            consumeNativeWidgetBridge();
+          }
+        });
+
         // Responsive Pagination & Time Checks
         window.addEventListener('resize', () => {
           renderAll();
@@ -2804,6 +3107,7 @@
         updateAppBadge();
         if (isNativeApp) {
           syncNativeNotifications();
+          consumeNativeWidgetBridge();
         }
       })();
     </script>

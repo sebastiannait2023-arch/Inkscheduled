@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tinta-eink-v6';
+const CACHE_NAME = 'tinta-eink-v9';
 const PRECACHE_ASSETS = [
   '/',
   '/index.html',
