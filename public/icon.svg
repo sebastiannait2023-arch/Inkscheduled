@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" fill="#FFFFFF"/>
+  <rect x="24" y="24" width="464" height="464" fill="none" stroke="#000000" stroke-width="24"/>
+  <!-- Three E-Ink horizontal sections motif -->
+  <line x1="24" y1="184" x2="488" y2="184" stroke="#000000" stroke-width="20"/>
+  <line x1="24" y1="336" x2="488" y2="336" stroke="#000000" stroke-width="20"/>
+  <!-- Top section: Sun accent + bar -->
+  <circle cx="104" cy="104" r="24" fill="#D95F00"/>
+  <rect x="160" y="92" width="248" height="24" fill="#000000"/>
+  <!-- Middle section: Moon/Cobalt accent + bar -->
+  <rect x="80" y="236" width="48" height="48" fill="#0044CC"/>
+  <rect x="160" y="248" width="208" height="24" fill="#000000"/>
+  <!-- Bottom section: Check + bar -->
+  <path d="M80 412 L100 432 L136 392" fill="none" stroke="#007A33" stroke-width="20" stroke-linecap="square" stroke-linejoin="miter"/>
+  <rect x="160" y="400" width="232" height="24" fill="#000000"/>
+</svg>

@@ -1,0 +1,8 @@
+{
+  "name": "Tinta — Recordatorios E-Ink",
+  "description": "PWA minimalista offline-first de recordatorios en tres secciones (Mañana, Tarde, Pendientes) optimizada para pantallas E-Ink Kaleido 3.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

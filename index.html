@@ -1,0 +1,2811 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Tinta — Recordatorios E-Ink</title>
+    <meta name="description" content="PWA minimalista offline-first de recordatorios en tres secciones (Mañana, Tarde, Pendientes) optimizada para pantallas E-Ink Kaleido 3." />
+    <meta property="og:title" content="Tinta — Recordatorios E-Ink" />
+    <meta property="og:description" content="PWA minimalista offline-first de recordatorios en tres secciones (Mañana, Tarde, Pendientes) optimizada para pantallas E-Ink Kaleido 3." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- PWA & Mobile Meta -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#ffffff" id="metaThemeColor" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Tinta" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+
+    <style>
+      @font-face {
+        font-family: 'Atkinson Hyperlegible Next';
+        font-style: normal;
+        font-weight: 400 800;
+        font-display: swap;
+        src: url('/fonts/atkinson-latin-ext.woff2') format('woff2');
+        unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+      }
+      @font-face {
+        font-family: 'Atkinson Hyperlegible Next';
+        font-style: normal;
+        font-weight: 400 800;
+        font-display: swap;
+        src: url('/fonts/atkinson-latin.woff2') format('woff2');
+        unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+      }
+
+      :root {
+        --bg: #ffffff;
+        --fg: #000000;
+        --border: #000000;
+        --inv-bg: #000000;
+        --inv-fg: #ffffff;
+        --morning: #d95f00;
+        --afternoon: #0044cc;
+        --inbox: #000000;
+        --cat-personal: #0044cc;
+        --cat-trabajo: #cc0000;
+        --cat-salud: #007a33;
+        --cat-recados: #d95f00;
+        --urgent: #cc0000;
+      }
+
+      html.dark {
+        --bg: #000000;
+        --fg: #ffffff;
+        --border: #ffffff;
+        --inv-bg: #ffffff;
+        --inv-fg: #000000;
+        --morning: #ff8c1a;
+        --afternoon: #4d88ff;
+        --inbox: #ffffff;
+        --cat-personal: #4d88ff;
+        --cat-trabajo: #ff4d4d;
+        --cat-salud: #2ecc71;
+        --cat-recados: #ff8c1a;
+        --urgent: #ff4d4d;
+      }
+
+      /* E-Ink Hardware Constitution: zero transitions, animations, blurs, or shadows */
+      *, *::before, *::after {
+        box-sizing: border-box;
+        transition: none !important;
+        animation: none !important;
+        box-shadow: none !important;
+        text-shadow: none !important;
+        backdrop-filter: none !important;
+      }
+
+      html, body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100dvh;
+        overflow: hidden;
+        background: var(--bg);
+        color: var(--fg);
+        font-family: 'Atkinson Hyperlegible Next', system-ui, -apple-system, sans-serif;
+        font-weight: 600;
+        line-height: 1.25;
+        -webkit-tap-highlight-color: transparent;
+        scroll-behavior: auto;
+      }
+
+      button, input, select {
+        font-family: inherit;
+        color: inherit;
+        background: transparent;
+        border-radius: 2px;
+      }
+
+      button {
+        cursor: pointer;
+        user-select: none;
+        touch-action: manipulation;
+      }
+
+      button:focus-visible, input:focus-visible, select:focus-visible {
+        outline: 3px solid var(--fg);
+        outline-offset: 1px;
+      }
+
+      .tabular {
+        font-variant-numeric: tabular-nums;
+      }
+
+      /* App Shell */
+      .app-shell {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        height: 100dvh;
+        background: var(--bg);
+      }
+
+      /* Full-Bleed Top Bar (Edge-to-Edge, Red Zone) */
+      .top-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        height: 48px;
+        min-height: 48px;
+        padding: 0 14px;
+        border-bottom: 2.5px solid var(--border);
+        background: var(--bg);
+        flex-shrink: 0;
+      }
+
+      .top-brand-group {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        min-width: 0;
+        overflow: hidden;
+      }
+
+      .top-brand {
+        font-size: 18px;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+
+      .top-meta {
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .top-actions {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-shrink: 0;
+      }
+
+      .btn-icon-sm {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 38px;
+        height: 34px;
+        padding: 0 9px;
+        border: 2px solid var(--border);
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 800;
+        white-space: nowrap;
+      }
+
+      .btn-icon-sm.inv {
+        background: var(--inv-bg);
+        color: var(--inv-fg);
+      }
+
+      /* 3-Section Fixed Viewport Grid with Side Padding */
+      .sections-grid {
+        flex: 1;
+        min-height: 0;
+        display: grid;
+        grid-template-rows: 1fr 1fr 1.15fr;
+        grid-template-columns: 1fr;
+        gap: 10px;
+        padding: 10px 14px 8px 14px;
+        overflow: hidden;
+      }
+
+      .sections-grid.focused {
+        grid-template-rows: 1fr;
+      }
+
+      @media (min-width: 900px) {
+        .sections-grid {
+          grid-template-rows: 1fr;
+          grid-template-columns: 1fr 1fr 1fr;
+          gap: 14px;
+          padding: 14px 20px 10px 20px;
+        }
+        .sections-grid.focused {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .section-pane {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        min-width: 0;
+        border: 2px solid var(--border);
+        border-radius: 10px;
+        background: var(--bg);
+        overflow: hidden;
+      }
+
+      .section-pane.hidden-pane {
+        display: none;
+      }
+
+      .section-accent {
+        height: 5px;
+        min-height: 5px;
+        width: 100%;
+        flex-shrink: 0;
+      }
+
+      .section-accent.morning { background: var(--morning); }
+      .section-accent.afternoon { background: var(--afternoon); }
+      .section-accent.inbox { background: var(--inbox); }
+
+      /* Section Header */
+      .section-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        height: 40px;
+        min-height: 40px;
+        padding: 0 8px 0 12px;
+        border-bottom: 2px solid var(--border);
+        background: var(--bg);
+        flex-shrink: 0;
+      }
+
+      .section-title-btn {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        border: none;
+        padding: 2px 0;
+        min-height: 34px;
+        text-align: left;
+        min-width: 0;
+      }
+
+      .section-title-text {
+        font-size: 15px;
+        font-weight: 800;
+        letter-spacing: -0.01em;
+        white-space: nowrap;
+      }
+
+      .count-box {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 24px;
+        height: 22px;
+        padding: 0 7px;
+        border: 2px solid var(--border);
+        background: var(--inv-bg);
+        color: var(--inv-fg);
+        font-size: 12px;
+        font-weight: 800;
+        border-radius: 6px;
+      }
+
+      .count-box.is-zero {
+        background: var(--bg);
+        color: var(--fg);
+      }
+
+      .focus-hint {
+        font-size: 11px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+
+      .pager {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        flex-shrink: 0;
+      }
+
+      .pager-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 34px;
+        height: 28px;
+        border: 2px solid var(--border);
+        border-radius: 6px;
+        background: var(--bg);
+        color: var(--fg);
+        font-weight: 800;
+      }
+
+      .pager-btn:disabled {
+        opacity: 0.25;
+        cursor: default;
+      }
+
+      .pager-info {
+        font-size: 12px;
+        font-weight: 800;
+        padding: 0 4px;
+        white-space: nowrap;
+      }
+
+      /* Section Body & Task Rows */
+      .section-body {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        padding: 2px 10px;
+      }
+
+      .empty-state {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 12px 16px;
+        text-align: center;
+        font-size: 14px;
+        font-weight: 600;
+        opacity: 0.72;
+      }
+
+      .task-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 52px;
+        padding: 6px 0;
+        border-bottom: 2px solid var(--border);
+        background: var(--bg);
+      }
+
+      .task-row:last-child {
+        border-bottom: none;
+      }
+
+      .task-row.is-done {
+        opacity: 0.55;
+      }
+
+      /* Left Checkbox (40x44px hitbox) */
+      .check-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 44px;
+        min-width: 40px;
+        border: none;
+        padding: 0;
+        flex-shrink: 0;
+      }
+
+      .check-box {
+        width: 24px;
+        height: 24px;
+        border: 2.5px solid var(--border);
+        border-radius: 6px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--bg);
+      }
+
+      .task-row.is-done .check-box {
+        background: var(--inv-bg);
+        color: var(--inv-fg);
+      }
+
+      /* Task Center Text (Tappable for Detail Sheet) */
+      .task-main {
+        flex: 1;
+        min-width: 0;
+        border: none;
+        padding: 4px 2px;
+        text-align: left;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 2px;
+        min-height: 44px;
+      }
+
+      .task-title-line {
+        display: flex;
+        align-items: flex-start;
+        gap: 7px;
+      }
+
+      .cat-bar {
+        display: inline-block;
+        width: 4px;
+        min-width: 4px;
+        height: 18px;
+        margin-top: 2px;
+        border-radius: 2px;
+        flex-shrink: 0;
+      }
+
+      .cat-mark {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        min-width: 10px;
+        border-radius: 2px;
+        flex-shrink: 0;
+      }
+
+      .urgent-mark {
+        font-weight: 800;
+        color: var(--urgent);
+        margin-right: 3px;
+      }
+
+      .task-title {
+        font-size: 16.5px;
+        font-weight: 700;
+        line-height: 1.22;
+        word-break: break-word;
+      }
+
+      .task-row.is-done .task-title {
+        text-decoration: line-through;
+        text-decoration-thickness: 2px;
+      }
+
+      .task-meta {
+        font-size: 12.5px;
+        font-weight: 700;
+        line-height: 1.2;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .task-meta .overdue-flag {
+        color: var(--urgent);
+        font-weight: 800;
+      }
+
+      /* Right-Hand Move Icon Buttons */
+      .move-group {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-shrink: 0;
+      }
+
+      .move-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        min-width: 40px;
+        border: 2px solid var(--border);
+        border-radius: 8px;
+        background: var(--bg);
+        padding: 0;
+      }
+
+      .move-btn:active, .check-btn:active .check-box, .add-btn:active, .chip-btn:active {
+        background: var(--inv-bg);
+        color: var(--inv-fg);
+      }
+
+      /* Undo Bar (Aligned with side padding) */
+      .undo-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin: 0 14px 8px 14px;
+        padding: 6px 12px;
+        background: var(--inv-bg);
+        color: var(--inv-fg);
+        border: 2px solid var(--border);
+        border-radius: 10px;
+        font-size: 14px;
+        font-weight: 700;
+        flex-shrink: 0;
+      }
+
+      @media (min-width: 900px) {
+        .undo-bar {
+          margin: 0 20px 10px 20px;
+        }
+      }
+
+      .undo-bar.hidden {
+        display: none;
+      }
+
+      .undo-btn {
+        min-height: 34px;
+        padding: 0 12px;
+        border: 2px solid var(--inv-fg);
+        border-radius: 6px;
+        background: var(--inv-bg);
+        color: var(--inv-fg);
+        font-size: 12px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      /* Bottom Thumb Capture Dock (Side-padded framed deck) */
+      .capture-dock {
+        flex-shrink: 0;
+        margin: 0 14px calc(12px + env(safe-area-inset-bottom)) 14px;
+        padding: 8px 10px;
+        border: 2px solid var(--border);
+        border-radius: 12px;
+        background: var(--bg);
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+      }
+
+      @media (min-width: 900px) {
+        .capture-dock {
+          margin: 0 20px 16px 20px;
+          padding: 10px 12px;
+        }
+      }
+
+      .quick-strip {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 6px;
+        overflow-x: auto;
+      }
+
+      .target-group, .option-group {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        flex-shrink: 0;
+      }
+
+      .chip-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+        height: 34px;
+        padding: 0 9px;
+        border: 2px solid var(--border);
+        border-radius: 8px;
+        background: var(--bg);
+        color: var(--fg);
+        font-size: 13px;
+        font-weight: 800;
+        white-space: nowrap;
+      }
+
+      .chip-btn.active {
+        background: var(--inv-bg);
+        color: var(--inv-fg);
+      }
+
+      .time-inline-wrap {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding: 8px;
+        border: 2px solid var(--border);
+        border-radius: 8px;
+        background: var(--bg);
+      }
+
+      .time-inline-wrap.hidden {
+        display: none;
+      }
+
+      .time-picker-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 6px;
+      }
+
+      .time-readout {
+        font-size: 14px;
+        font-weight: 800;
+        letter-spacing: 0.02em;
+      }
+
+      .time-picker-actions {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+
+      .hour-grid {
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 4px;
+      }
+
+      .hour-grid-8 {
+        display: grid;
+        grid-template-columns: repeat(8, 1fr);
+        gap: 4px;
+      }
+
+      .tp-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        height: 32px;
+        padding: 0;
+        border: 2px solid var(--border);
+        border-radius: 6px;
+        background: var(--bg);
+        color: var(--fg);
+        font-size: 13px;
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .tp-btn.active {
+        background: var(--inv-bg);
+        color: var(--inv-fg);
+      }
+
+      .minute-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 5px;
+      }
+
+      .tp-min-btn {
+        height: 36px;
+        font-size: 14px;
+      }
+
+      .tp-btn:active {
+        background: var(--inv-bg);
+        color: var(--inv-fg);
+      }
+
+      .smart-preview {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 6px;
+        padding: 4px 8px;
+        border: 2px solid var(--border);
+        border-radius: 6px;
+        background: var(--bg);
+        font-size: 12.5px;
+        font-weight: 800;
+        line-height: 1.2;
+      }
+
+      .smart-preview.hidden {
+        display: none;
+      }
+
+      .smart-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .smart-urgent {
+        color: var(--urgent);
+      }
+
+      .input-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .quick-input {
+        flex: 1;
+        min-width: 0;
+        height: 46px;
+        padding: 0 12px;
+        border: 2px solid var(--border);
+        border-radius: 8px;
+        background: var(--bg);
+        color: var(--fg);
+        font-size: 16.5px;
+        font-weight: 700;
+      }
+
+      .quick-input::placeholder {
+        color: var(--fg);
+        opacity: 0.6;
+        font-weight: 600;
+      }
+
+      .add-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 52px;
+        min-width: 52px;
+        height: 46px;
+        border: 2px solid var(--border);
+        border-radius: 8px;
+        background: var(--inv-bg);
+        color: var(--inv-fg);
+        flex-shrink: 0;
+      }
+
+      /* Flat Modal Sheets (Zero blur, zero shadows) */
+      .sheet-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 50;
+        background: rgba(0, 0, 0, 0.72);
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        padding: 0 10px;
+      }
+
+      .sheet-backdrop.hidden {
+        display: none;
+      }
+
+      .sheet-panel {
+        width: 100%;
+        max-width: 600px;
+        max-height: 88dvh;
+        overflow-y: auto;
+        background: var(--bg);
+        color: var(--fg);
+        border-top: 2.5px solid var(--border);
+        border-left: 2.5px solid var(--border);
+        border-right: 2.5px solid var(--border);
+        border-radius: 14px 14px 0 0;
+        padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      @media (min-width: 640px) {
+        .sheet-backdrop {
+          align-items: center;
+          padding: 16px;
+        }
+        .sheet-panel {
+          border: 2.5px solid var(--border);
+          border-radius: 14px;
+        }
+      }
+
+      .sheet-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid var(--border);
+      }
+
+      .sheet-title {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 800;
+        letter-spacing: -0.01em;
+      }
+
+      .field-group {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+      }
+
+      .field-label {
+        font-size: 12px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      .field-input {
+        width: 100%;
+        height: 46px;
+        padding: 0 12px;
+        border: 2px solid var(--border);
+        border-radius: 8px;
+        background: var(--bg);
+        color: var(--fg);
+        font-size: 16px;
+        font-weight: 700;
+      }
+
+      .field-row-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+
+      .btn-grid-3 {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 6px;
+      }
+
+      .btn-grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+
+      .seg-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        min-height: 44px;
+        padding: 0 8px;
+        border: 2px solid var(--border);
+        border-radius: 8px;
+        background: var(--bg);
+        color: var(--fg);
+        font-size: 14px;
+        font-weight: 800;
+      }
+
+      .seg-btn.active {
+        background: var(--inv-bg);
+        color: var(--inv-fg);
+      }
+
+      .btn-primary {
+        min-height: 48px;
+        padding: 0 14px;
+        border: 2px solid var(--border);
+        border-radius: 8px;
+        background: var(--inv-bg);
+        color: var(--inv-fg);
+        font-size: 15px;
+        font-weight: 800;
+        letter-spacing: 0.02em;
+      }
+
+      .btn-secondary {
+        min-height: 46px;
+        padding: 0 12px;
+        border: 2px solid var(--border);
+        border-radius: 8px;
+        background: var(--bg);
+        color: var(--fg);
+        font-size: 14px;
+        font-weight: 800;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+      }
+
+      .btn-danger {
+        min-height: 46px;
+        padding: 0 12px;
+        border: 2px solid var(--urgent);
+        border-radius: 8px;
+        background: var(--bg);
+        color: var(--urgent);
+        font-size: 14px;
+        font-weight: 800;
+      }
+
+      .helper-note {
+        font-size: 13px;
+        font-weight: 600;
+        line-height: 1.35;
+        border: 2px solid var(--border);
+        border-radius: 8px;
+        padding: 10px 12px;
+      }
+
+      .hidden {
+        display: none !important;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-shell">
+      <!-- Top Full-Bleed Header (Red Zone) -->
+      <header class="top-bar">
+        <div class="top-brand-group">
+          <span class="top-brand">Tinta</span>
+          <span class="top-meta tabular" id="topMeta">Hoy · 0 activos</span>
+        </div>
+        <div class="top-actions">
+          <button type="button" class="btn-icon-sm inv hidden" id="installBtn" aria-label="Instalar aplicación">Instalar</button>
+          <button type="button" class="btn-icon-sm" id="themeBtn" aria-label="Cambiar contraste claro u oscuro" title="Modo claro / oscuro">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="square" aria-hidden="true">
+              <circle cx="12" cy="12" r="9"/>
+              <path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none"/>
+            </svg>
+          </button>
+          <button type="button" class="btn-icon-sm" id="settingsBtn" aria-label="Ajustes y respaldo" title="Ajustes y respaldo">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="square" aria-hidden="true">
+              <line x1="4" y1="6" x2="20" y2="6"/>
+              <line x1="4" y1="12" x2="20" y2="12"/>
+              <line x1="4" y1="18" x2="20" y2="18"/>
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <!-- 3 Fixed Stationery Sections Grid -->
+      <main class="sections-grid" id="sectionsGrid">
+        <!-- MAÑANA -->
+        <section class="section-pane" id="pane-morning" aria-label="Mañana">
+          <div class="section-accent morning" aria-hidden="true"></div>
+          <div class="section-header">
+            <button type="button" class="section-title-btn" data-focus-section="morning" title="Tocar para ampliar o restaurar Mañana">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--morning)" stroke-width="2.75" stroke-linecap="square" aria-hidden="true">
+                <circle cx="12" cy="12" r="4"/>
+                <line x1="12" y1="2" x2="12" y2="5"/>
+                <line x1="12" y1="19" x2="12" y2="22"/>
+                <line x1="2" y1="12" x2="5" y2="12"/>
+                <line x1="19" y1="12" x2="22" y2="12"/>
+                <line x1="4.9" y1="4.9" x2="7.1" y2="7.1"/>
+                <line x1="16.9" y1="16.9" x2="19.1" y2="19.1"/>
+                <line x1="4.9" y1="19.1" x2="7.1" y2="16.9"/>
+                <line x1="16.9" y1="7.1" x2="19.1" y2="4.9"/>
+              </svg>
+              <span class="section-title-text">Mañana</span>
+              <span class="count-box tabular" id="count-morning">0</span>
+              <span class="focus-hint" id="focus-hint-morning"></span>
+            </button>
+            <div class="pager" id="pager-morning"></div>
+          </div>
+          <div class="section-body" id="list-morning"></div>
+        </section>
+
+        <!-- TARDE -->
+        <section class="section-pane" id="pane-afternoon" aria-label="Tarde">
+          <div class="section-accent afternoon" aria-hidden="true"></div>
+          <div class="section-header">
+            <button type="button" class="section-title-btn" data-focus-section="afternoon" title="Tocar para ampliar o restaurar Tarde">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--afternoon)" stroke-width="2.75" stroke-linecap="square" aria-hidden="true">
+                <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>
+              </svg>
+              <span class="section-title-text">Tarde</span>
+              <span class="count-box tabular" id="count-afternoon">0</span>
+              <span class="focus-hint" id="focus-hint-afternoon"></span>
+            </button>
+            <div class="pager" id="pager-afternoon"></div>
+          </div>
+          <div class="section-body" id="list-afternoon"></div>
+        </section>
+
+        <!-- PENDIENTES -->
+        <section class="section-pane" id="pane-inbox" aria-label="Pendientes">
+          <div class="section-accent inbox" aria-hidden="true"></div>
+          <div class="section-header">
+            <button type="button" class="section-title-btn" data-focus-section="inbox" title="Tocar para ampliar o restaurar Pendientes">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--inbox)" stroke-width="2.75" stroke-linecap="square" aria-hidden="true">
+                <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/>
+                <path d="M5.5 5h13L22 12v7H2v-7l3.5-7z"/>
+              </svg>
+              <span class="section-title-text">Pendientes</span>
+              <span class="count-box tabular" id="count-inbox">0</span>
+              <span class="focus-hint" id="focus-hint-inbox"></span>
+            </button>
+            <div class="pager" id="pager-inbox"></div>
+          </div>
+          <div class="section-body" id="list-inbox"></div>
+        </section>
+      </main>
+
+      <!-- Undo Bar -->
+      <div class="undo-bar hidden" id="undoBar" role="status" aria-live="polite">
+        <span id="undoText">Recordatorio completado</span>
+        <button type="button" class="undo-btn" id="undoBtn">Deshacer</button>
+      </div>
+
+      <!-- Bottom Right-Hand Thumb Capture Dock -->
+      <form class="capture-dock" id="captureForm" autocomplete="off">
+        <div class="quick-strip">
+          <div class="target-group" role="group" aria-label="Sección destino">
+            <button type="button" class="chip-btn active" data-target="inbox" id="target-inbox">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="square" aria-hidden="true">
+                <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/>
+                <path d="M5.5 5h13L22 12v7H2v-7l3.5-7z"/>
+              </svg>
+              <span>Pend.</span>
+            </button>
+            <button type="button" class="chip-btn" data-target="morning" id="target-morning">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="square" aria-hidden="true">
+                <circle cx="12" cy="12" r="4"/>
+                <line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/>
+                <line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/>
+              </svg>
+              <span>Mañ.</span>
+            </button>
+            <button type="button" class="chip-btn" data-target="afternoon" id="target-afternoon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="square" aria-hidden="true">
+                <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>
+              </svg>
+              <span>Tarde</span>
+            </button>
+          </div>
+          <div class="option-group">
+            <button type="button" class="chip-btn" id="quickCatBtn" aria-label="Cambiar categoría">
+              <span class="cat-mark" id="quickCatDot" style="display:none;"></span>
+              <span id="quickCatLabel">Cat.</span>
+            </button>
+            <button type="button" class="chip-btn" id="quickTimeToggle" aria-label="Añadir hora">
+              <span id="quickTimeLabel">Hora</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="time-inline-wrap hidden" id="quickTimeWrap">
+          <div class="time-picker-head">
+            <span class="time-readout tabular" id="quickTimeReadout">Hora: --:--</span>
+            <div class="time-picker-actions">
+              <button type="button" class="chip-btn" id="quickManualTimeBtn" style="height:30px;font-size:12px;">Manual</button>
+              <button type="button" class="chip-btn" id="clearQuickTimeBtn" style="height:30px;font-size:12px;">Sin hora</button>
+            </div>
+          </div>
+          <div class="hour-grid" id="quickHourGrid" aria-label="Selector rápido de hora"></div>
+          <div class="minute-grid" id="quickMinuteGrid" aria-label="Minutos de 15 en 15">
+            <button type="button" class="tp-btn tp-min-btn" data-qmin="00">:00</button>
+            <button type="button" class="tp-btn tp-min-btn" data-qmin="15">:15</button>
+            <button type="button" class="tp-btn tp-min-btn" data-qmin="30">:30</button>
+            <button type="button" class="tp-btn tp-min-btn" data-qmin="45">:45</button>
+          </div>
+          <input type="time" class="field-input hidden" id="quickTimeInput" aria-label="Hora manual" style="height:38px;" />
+        </div>
+
+        <div class="smart-preview hidden" id="smartPreview" aria-live="polite"></div>
+
+        <div class="input-row">
+          <input
+            type="text"
+            class="quick-input"
+            id="quickInput"
+            placeholder="+ Recordatorio (ej: ! s: Cita 17:30)..."
+            maxlength="140"
+            aria-label="Nuevo recordatorio"
+          />
+          <button type="submit" class="add-btn" id="addBtn" aria-label="Guardar recordatorio">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="square" aria-hidden="true">
+              <line x1="12" y1="4" x2="12" y2="20"/>
+              <line x1="4" y1="12" x2="20" y2="12"/>
+            </svg>
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Edit / Detail Bottom Sheet -->
+    <div class="sheet-backdrop hidden" id="editSheet" role="dialog" aria-modal="true" aria-labelledby="editSheetTitle">
+      <div class="sheet-panel">
+        <div class="sheet-header">
+          <h2 class="sheet-title" id="editSheetTitle">Editar recordatorio</h2>
+          <button type="button" class="btn-icon-sm" id="closeEditBtn" aria-label="Cerrar">Cerrar</button>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label" for="editTitle">Texto</label>
+          <input type="text" class="field-input" id="editTitle" maxlength="140" />
+        </div>
+
+        <div class="field-group">
+          <span class="field-label">Sección</span>
+          <div class="btn-grid-3">
+            <button type="button" class="seg-btn" data-edit-section="morning">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="square" aria-hidden="true"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/></svg>
+              <span>Mañana</span>
+            </button>
+            <button type="button" class="seg-btn" data-edit-section="afternoon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="square" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+              <span>Tarde</span>
+            </button>
+            <button type="button" class="seg-btn" data-edit-section="inbox">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="square" aria-hidden="true"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.5 5h13L22 12v7H2v-7l3.5-7z"/></svg>
+              <span>Pend.</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="field-row-2">
+          <div class="field-group">
+            <label class="field-label" for="editDate">Fecha (opcional)</label>
+            <input type="date" class="field-input tabular" id="editDate" />
+          </div>
+          <div class="field-group">
+            <label class="field-label" for="editTime">Hora manual (opcional)</label>
+            <div style="display:flex;gap:6px;">
+              <input type="time" class="field-input tabular" id="editTime" style="flex:1;min-width:0;" />
+              <button type="button" class="chip-btn" id="clearEditTimeBtn" style="height:46px;" aria-label="Quitar hora">×</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <span class="field-label">Hora rápida (de 15 en 15 min)</span>
+          <div class="hour-grid-8" id="editHourGrid" aria-label="Horas rápidas para editar"></div>
+          <div class="minute-grid" id="editMinuteGrid" aria-label="Minutos rápidos de 15 en 15">
+            <button type="button" class="tp-btn tp-min-btn" data-emin="00">:00</button>
+            <button type="button" class="tp-btn tp-min-btn" data-emin="15">:15</button>
+            <button type="button" class="tp-btn tp-min-btn" data-emin="30">:30</button>
+            <button type="button" class="tp-btn tp-min-btn" data-emin="45">:45</button>
+          </div>
+        </div>
+
+        <div class="field-row-2">
+          <div class="field-group">
+            <label class="field-label" for="editCategory">Categoría Kaleido 3</label>
+            <select class="field-input" id="editCategory">
+              <option value="none">Sin categoría</option>
+              <option value="personal">Personal (Azul)</option>
+              <option value="trabajo">Trabajo (Rojo)</option>
+              <option value="salud">Salud (Verde)</option>
+              <option value="recados">Recados (Ámbar)</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label class="field-label" for="editRepeat">Repetición</label>
+            <select class="field-input" id="editRepeat">
+              <option value="none">Una sola vez</option>
+              <option value="daily">Diaria</option>
+              <option value="weekly">Semanal</option>
+              <option value="monthly">Mensual</option>
+            </select>
+          </div>
+        </div>
+
+        <button type="button" class="seg-btn" id="editPriorityBtn">Marcar como urgente (!)</button>
+
+        <button type="button" class="btn-secondary" id="exportIcsBtn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="square" aria-hidden="true">
+            <rect x="3" y="4" width="18" height="18"/>
+            <line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+          <span>Exportar alarma al calendario (.ics)</span>
+        </button>
+
+        <div class="btn-grid-2">
+          <button type="button" class="btn-danger" id="deleteTaskBtn">Eliminar</button>
+          <button type="button" class="btn-primary" id="saveEditBtn">Guardar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings & Backup Sheet -->
+    <div class="sheet-backdrop hidden" id="settingsSheet" role="dialog" aria-modal="true" aria-labelledby="settingsSheetTitle">
+      <div class="sheet-panel">
+        <div class="sheet-header">
+          <h2 class="sheet-title" id="settingsSheetTitle">Ajustes y respaldo</h2>
+          <button type="button" class="btn-icon-sm" id="closeSettingsBtn" aria-label="Cerrar">Cerrar</button>
+        </div>
+
+        <div class="field-group">
+          <span class="field-label">Actividad</span>
+          <button type="button" class="btn-secondary" id="openReportBtn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="square" aria-hidden="true">
+              <line x1="4" y1="20" x2="20" y2="20"/>
+              <rect x="6" y="11" width="3" height="6"/>
+              <rect x="11" y="7" width="3" height="10"/>
+              <rect x="16" y="4" width="3" height="13"/>
+            </svg>
+            <span>Reporte (últimos 7 días)</span>
+          </button>
+        </div>
+
+        <div class="btn-grid-2">
+          <button type="button" class="btn-secondary" id="toggleDoneViewBtn">Mostrar completados</button>
+          <button type="button" class="btn-danger" id="clearDoneBtn">Limpiar completados</button>
+        </div>
+
+        <div class="field-group">
+          <span class="field-label">Copia de seguridad local (JSON)</span>
+          <div class="btn-grid-2">
+            <button type="button" class="btn-secondary" id="exportJsonBtn">Exportar JSON</button>
+            <button type="button" class="btn-secondary" id="importJsonBtn">Importar JSON</button>
+          </div>
+          <input type="file" id="importFileInput" accept=".json,application/json" class="hidden" />
+        </div>
+
+        <div class="field-group">
+          <span class="field-label">Notificaciones e instalación</span>
+          <button type="button" class="btn-secondary" id="notifPermBtn">Activar alertas en primer plano</button>
+          <button type="button" class="btn-primary hidden" id="sheetInstallBtn">Instalar Tinta como App</button>
+          <div class="helper-note" id="iosInstallNote" style="display:none;">
+            En iPhone/iPad: pulsa <strong>Compartir</strong> en Safari y luego <strong>Añadir a pantalla de inicio</strong>.
+          </div>
+          <div class="helper-note" id="notifHelperNote">
+            Nota Android PWA: las alertas web funcionan con la app abierta; para alarmas críticas con el teléfono bloqueado usa <strong>Exportar alarma (.ics)</strong> dentro de cualquier recordatorio o compila el <strong>APK nativo</strong>.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 7-Day D3 Report Sheet -->
+    <div class="sheet-backdrop hidden" id="reportSheet" role="dialog" aria-modal="true" aria-labelledby="reportSheetTitle">
+      <div class="sheet-panel">
+        <div class="sheet-header">
+          <h2 class="sheet-title" id="reportSheetTitle">Reporte · Últimos 7 días</h2>
+          <button type="button" class="btn-icon-sm" id="closeReportBtn" aria-label="Cerrar">Cerrar</button>
+        </div>
+        <div class="tabular" id="reportSummary" style="font-size:14px;font-weight:700;">0 tareas completadas por categoría</div>
+        <div id="reportChart" style="width:100%;border:2px solid var(--border);border-radius:10px;padding:10px 8px 6px 8px;background:var(--bg);"></div>
+        <div class="btn-grid-2">
+          <button type="button" class="btn-secondary" id="backToSettingsBtn">Volver a ajustes</button>
+          <button type="button" class="btn-primary" id="doneReportBtn">Listo</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="/vendor/d3.min.js"></script>
+    <script>
+      (function () {
+        'use strict';
+
+        const STORAGE_KEY = 'tinta_eink_state_v1';
+        const CATEGORIES = ['none', 'personal', 'trabajo', 'salud', 'recados'];
+        const CAT_META = {
+          none: { label: 'Cat.', full: 'Sin categoría', color: '' },
+          personal: { label: 'Personal', full: 'Personal', color: 'var(--cat-personal)' },
+          trabajo: { label: 'Trabajo', full: 'Trabajo', color: 'var(--cat-trabajo)' },
+          salud: { label: 'Salud', full: 'Salud', color: 'var(--cat-salud)' },
+          recados: { label: 'Recados', full: 'Recados', color: 'var(--cat-recados)' }
+        };
+        const REPEAT_LABEL = {
+          none: '',
+          daily: 'Diario',
+          weekly: 'Semanal',
+          monthly: 'Mensual'
+        };
+        const SECTIONS = ['morning', 'afternoon', 'inbox'];
+
+        const ICONS = {
+          morning: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--morning)" stroke-width="2.75" stroke-linecap="square" aria-hidden="true"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.9" y1="4.9" x2="7.1" y2="7.1"/><line x1="16.9" y1="16.9" x2="19.1" y2="19.1"/><line x1="4.9" y1="19.1" x2="7.1" y2="16.9"/><line x1="16.9" y1="7.1" x2="19.1" y2="4.9"/></svg>',
+          afternoon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--afternoon)" stroke-width="2.75" stroke-linecap="square" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>',
+          inbox: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--inbox)" stroke-width="2.75" stroke-linecap="square" aria-hidden="true"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.5 5h13L22 12v7H2v-7l3.5-7z"/></svg>',
+          check: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="square" aria-hidden="true"><polyline points="4 12 10 18 20 6"/></svg>',
+          up: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="square" aria-hidden="true"><polyline points="18 15 12 9 6 15"/></svg>',
+          down: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="square" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>'
+        };
+
+        function todayISO() {
+          const d = new Date();
+          const y = d.getFullYear();
+          const m = String(d.getMonth() + 1).padStart(2, '0');
+          const day = String(d.getDate()).padStart(2, '0');
+          return `${y}-${m}-${day}`;
+        }
+
+        function nowHHMM() {
+          const d = new Date();
+          return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+        }
+
+        function addDaysISO(iso, days) {
+          const base = iso ? new Date(iso + 'T12:00:00') : new Date();
+          base.setDate(base.getDate() + days);
+          const y = base.getFullYear();
+          const m = String(base.getMonth() + 1).padStart(2, '0');
+          const day = String(base.getDate()).padStart(2, '0');
+          return `${y}-${m}-${day}`;
+        }
+
+        function addMonthsISO(iso, months) {
+          const base = iso ? new Date(iso + 'T12:00:00') : new Date();
+          base.setMonth(base.getMonth() + months);
+          const y = base.getFullYear();
+          const m = String(base.getMonth() + 1).padStart(2, '0');
+          const day = String(base.getDate()).padStart(2, '0');
+          return `${y}-${m}-${day}`;
+        }
+
+        function uid() {
+          if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+            return window.crypto.randomUUID();
+          }
+          return 't_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7);
+        }
+
+        function pruneLog(log) {
+          const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+          return Array.isArray(log)
+            ? log.filter((entry) => entry && typeof entry.completedAt === 'number' && entry.completedAt >= cutoff)
+            : [];
+        }
+
+        function loadState() {
+          try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              if (parsed && Array.isArray(parsed.tasks)) {
+                return {
+                  tasks: parsed.tasks,
+                  completionLog: pruneLog(parsed.completionLog),
+                  dark: Boolean(parsed.dark),
+                  showDone: Boolean(parsed.showDone),
+                  focusedSection: SECTIONS.includes(parsed.focusedSection) ? parsed.focusedSection : null
+                };
+              }
+            }
+          } catch (_) {
+            // Fall through to initial seed
+          }
+          return {
+            tasks: [
+              {
+                id: uid(),
+                title: 'Revisar agenda del día',
+                section: 'morning',
+                dueDate: todayISO(),
+                dueTime: '09:00',
+                category: 'trabajo',
+                priority: true,
+                repeat: 'none',
+                done: false,
+                completedAt: null,
+                createdAt: Date.now() - 3000
+              },
+              {
+                id: uid(),
+                title: 'Paseo o estiramientos 20 min',
+                section: 'afternoon',
+                dueDate: todayISO(),
+                dueTime: '18:30',
+                category: 'salud',
+                priority: false,
+                repeat: 'daily',
+                done: false,
+                completedAt: null,
+                createdAt: Date.now() - 2000
+              },
+              {
+                id: uid(),
+                title: 'Toca aquí para editar o exportar .ics',
+                section: 'inbox',
+                dueDate: '',
+                dueTime: '',
+                category: 'personal',
+                priority: false,
+                repeat: 'none',
+                done: false,
+                completedAt: null,
+                createdAt: Date.now() - 1000
+              }
+            ],
+            completionLog: [],
+            dark: false,
+            showDone: false,
+            focusedSection: null
+          };
+        }
+
+        let state = loadState();
+        let quickTarget = 'inbox';
+        let manualTargetSelected = false;
+        let quickCatIndex = 0;
+        let quickHour = '';
+        let quickMinute = '';
+        let pages = { morning: 0, afternoon: 0, inbox: 0 };
+        let editingTaskId = null;
+        let editDraftSection = 'inbox';
+        let editDraftPriority = false;
+        let undoRecord = null;
+        let undoTimer = null;
+        let swRegistration = null;
+        let deferredInstallPrompt = null;
+        const firedNotifs = new Set();
+
+        function getNativeLocalNotifications() {
+          const cap = window.Capacitor;
+          if (!cap) return null;
+          const isNative = typeof cap.isNativePlatform === 'function' ? cap.isNativePlatform() : Boolean(cap.isNative);
+          if (!isNative) return null;
+          return (cap.Plugins && cap.Plugins.LocalNotifications) || null;
+        }
+
+        function hashTaskIdToInt(str) {
+          let h = 2166136261;
+          const s = String(str || '');
+          for (let i = 0; i < s.length; i++) {
+            h ^= s.charCodeAt(i);
+            h = Math.imul(h, 16777619);
+          }
+          return (h & 0x7fffffff) || 1;
+        }
+
+        let nativeSyncPromise = Promise.resolve();
+        let nativeChannelReady = false;
+
+        function syncNativeNotifications() {
+          const LocalNotifications = getNativeLocalNotifications();
+          if (!LocalNotifications) return Promise.resolve();
+
+          nativeSyncPromise = nativeSyncPromise.then(async () => {
+            try {
+              const perm = await LocalNotifications.checkPermissions();
+              if (!perm || perm.display !== 'granted') return;
+
+              if (!nativeChannelReady && typeof LocalNotifications.createChannel === 'function') {
+                await LocalNotifications.createChannel({
+                  id: 'tinta-alarmas',
+                  name: 'Recordatorios Tinta',
+                  description: 'Alertas exactas de tus recordatorios',
+                  importance: 5,
+                  visibility: 1,
+                  vibration: true
+                });
+                nativeChannelReady = true;
+              }
+
+              const pending = await LocalNotifications.getPending();
+              if (pending && Array.isArray(pending.notifications) && pending.notifications.length > 0) {
+                await LocalNotifications.cancel({
+                  notifications: pending.notifications.map((n) => ({ id: n.id }))
+                });
+              }
+
+              const now = Date.now();
+              const toSchedule = [];
+              const usedIds = new Set();
+
+              state.tasks.forEach((task) => {
+                if (task.done || !task.dueTime) return;
+                const dateStr = task.dueDate || todayISO();
+                const target = new Date(`${dateStr}T${task.dueTime}:00`);
+                const ts = target.getTime();
+                if (Number.isNaN(ts) || ts <= now + 1000) return;
+
+                let notifId = hashTaskIdToInt(task.id);
+                while (usedIds.has(notifId)) {
+                  notifId = (notifId % 2147483640) + 1;
+                }
+                usedIds.add(notifId);
+
+                const secLabel = task.section === 'morning' ? 'Mañana' : task.section === 'afternoon' ? 'Tarde' : 'Pendientes';
+                toSchedule.push({
+                  id: notifId,
+                  title: task.priority ? `! ${task.title}` : task.title,
+                  body: `${task.dueTime} · ${secLabel}`,
+                  channelId: 'tinta-alarmas',
+                  schedule: {
+                    at: target,
+                    allowWhileIdle: true
+                  },
+                  extra: { taskId: task.id }
+                });
+              });
+
+              if (toSchedule.length > 0) {
+                await LocalNotifications.schedule({ notifications: toSchedule });
+              }
+            } catch (_) {
+              // Ignore native scheduling errors silently
+            }
+          });
+
+          return nativeSyncPromise;
+        }
+
+        function saveState() {
+          try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+          } catch (_) {
+            // Storage full or restricted
+          }
+          updateAppBadge();
+          syncNativeNotifications();
+        }
+
+        function updateAppBadge() {
+          if ('setAppBadge' in navigator) {
+            const activeCount = state.tasks.filter((t) => !t.done).length;
+            if (activeCount > 0) {
+              navigator.setAppBadge(activeCount).catch(() => {});
+            } else if ('clearAppBadge' in navigator) {
+              navigator.clearAppBadge().catch(() => {});
+            }
+          }
+        }
+
+        function applyTheme() {
+          const root = document.documentElement;
+          if (state.dark) {
+            root.classList.add('dark');
+            document.getElementById('metaThemeColor').setAttribute('content', '#000000');
+          } else {
+            root.classList.remove('dark');
+            document.getElementById('metaThemeColor').setAttribute('content', '#ffffff');
+          }
+        }
+
+        function isOverdue(task) {
+          if (task.done || !task.dueTime) return false;
+          const today = todayISO();
+          const date = task.dueDate || today;
+          if (date < today) return true;
+          if (date === today && task.dueTime < nowHHMM()) return true;
+          return false;
+        }
+
+        function sortTasks(list) {
+          return list.slice().sort((a, b) => {
+            if (a.done !== b.done) return a.done ? 1 : -1;
+            const aOver = isOverdue(a);
+            const bOver = isOverdue(b);
+            if (aOver !== bOver) return aOver ? -1 : 1;
+            if (a.priority !== b.priority) return a.priority ? -1 : 1;
+            if ((a.dueTime || '99:99') !== (b.dueTime || '99:99')) {
+              return (a.dueTime || '99:99').localeCompare(b.dueTime || '99:99');
+            }
+            return (b.createdAt || 0) - (a.createdAt || 0);
+          });
+        }
+
+        function getPageSize(sectionEl) {
+          const h = sectionEl.clientHeight;
+          if (!h || h < 70) return 3;
+          return Math.max(1, Math.floor((h - 4) / 54));
+        }
+
+        function formatHeaderDate() {
+          const d = new Date();
+          const days = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+          const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+          return `${days[d.getDay()]} ${d.getDate()} ${months[d.getMonth()]}`;
+        }
+
+        function escapeText(str) {
+          const div = document.createElement('div');
+          div.textContent = str;
+          return div.innerHTML;
+        }
+
+        function renderTopMeta() {
+          const active = state.tasks.filter((t) => !t.done).length;
+          const overdue = state.tasks.filter((t) => isOverdue(t)).length;
+          let text = `${formatHeaderDate()} · ${active} ${active === 1 ? 'activo' : 'activos'}`;
+          if (overdue > 0) {
+            text += ` · ${overdue} venc.`;
+          }
+          document.getElementById('topMeta').textContent = text;
+        }
+
+        function renderSection(section) {
+          const pane = document.getElementById(`pane-${section}`);
+          const listEl = document.getElementById(`list-${section}`);
+          const countEl = document.getElementById(`count-${section}`);
+          const pagerEl = document.getElementById(`pager-${section}`);
+          const hintEl = document.getElementById(`focus-hint-${section}`);
+
+          if (state.focusedSection && state.focusedSection !== section) {
+            pane.classList.add('hidden-pane');
+            return;
+          }
+          pane.classList.remove('hidden-pane');
+          hintEl.textContent = state.focusedSection === section ? '· Volver' : '';
+
+          const rawTasks = state.tasks.filter((t) => {
+            if (t.section !== section) return false;
+            if (!state.showDone && t.done) return false;
+            return true;
+          });
+          const tasks = sortTasks(rawTasks);
+          const activeCount = rawTasks.filter((t) => !t.done).length;
+          countEl.textContent = String(activeCount);
+          countEl.classList.toggle('is-zero', activeCount === 0);
+
+          const pageSize = getPageSize(listEl);
+          const totalPages = Math.max(1, Math.ceil(tasks.length / pageSize));
+          if (pages[section] >= totalPages) pages[section] = totalPages - 1;
+          if (pages[section] < 0) pages[section] = 0;
+
+          if (totalPages > 1) {
+            pagerEl.innerHTML = `
+              <button type="button" class="pager-btn" data-page-dir="-1" data-page-sec="${section}" ${pages[section] === 0 ? 'disabled' : ''} aria-label="Página anterior">${ICONS.up}</button>
+              <span class="pager-info tabular">${pages[section] + 1}/${totalPages}</span>
+              <button type="button" class="pager-btn" data-page-dir="1" data-page-sec="${section}" ${pages[section] >= totalPages - 1 ? 'disabled' : ''} aria-label="Página siguiente">${ICONS.down}</button>
+            `;
+          } else {
+            pagerEl.innerHTML = '';
+          }
+
+          if (tasks.length === 0) {
+            const emptyMsg = section === 'morning'
+              ? 'Nada para la mañana'
+              : section === 'afternoon'
+                ? 'Tarde despejada'
+                : 'Bandeja vacía';
+            listEl.innerHTML = `<div class="empty-state">${emptyMsg}</div>`;
+            return;
+          }
+
+          const start = pages[section] * pageSize;
+          const visible = tasks.slice(start, start + pageSize);
+          const targets = SECTIONS.filter((s) => s !== section);
+          const targetLabels = {
+            morning: 'Mover a Mañana',
+            afternoon: 'Mover a Tarde',
+            inbox: 'Mover a Pendientes'
+          };
+
+          listEl.innerHTML = visible.map((t) => {
+            const cat = CAT_META[t.category] || CAT_META.none;
+            const overdue = isOverdue(t);
+            const metaParts = [];
+            if (overdue) metaParts.push('<span class="overdue-flag">! VENCIDO</span>');
+            if (t.dueTime) metaParts.push(escapeText(t.dueTime));
+            if (t.dueDate && t.dueDate !== todayISO()) {
+              metaParts.push(escapeText(t.dueDate.slice(5).split('-').reverse().join('/')));
+            }
+            if (t.category && t.category !== 'none') metaParts.push(escapeText(cat.full));
+            if (t.repeat && t.repeat !== 'none') metaParts.push(escapeText(REPEAT_LABEL[t.repeat]));
+
+            const catBar = cat.color
+              ? `<span class="cat-bar" style="background:${cat.color};" aria-hidden="true"></span>`
+              : '';
+            const urgentMark = t.priority ? '<span class="urgent-mark" aria-label="Urgente">!</span>' : '';
+
+            return `
+              <div class="task-row ${t.done ? 'is-done' : ''}" data-id="${t.id}">
+                <button type="button" class="check-btn" data-action="toggle" data-id="${t.id}" aria-label="${t.done ? 'Desmarcar' : 'Completar'} ${escapeText(t.title)}">
+                  <span class="check-box">${t.done ? ICONS.check : ''}</span>
+                </button>
+                <button type="button" class="task-main" data-action="edit" data-id="${t.id}">
+                  <span class="task-title-line">
+                    ${catBar}
+                    <span class="task-title">${urgentMark}${escapeText(t.title)}</span>
+                  </span>
+                  ${metaParts.length ? `<span class="task-meta tabular">${metaParts.join(' · ')}</span>` : ''}
+                </button>
+                <div class="move-group">
+                  ${targets.map((dest) => `
+                    <button type="button" class="move-btn" data-action="move" data-id="${t.id}" data-dest="${dest}" aria-label="${targetLabels[dest]}" title="${targetLabels[dest]}">
+                      ${ICONS[dest]}
+                    </button>
+                  `).join('')}
+                </div>
+              </div>
+            `;
+          }).join('');
+        }
+
+        function renderAll() {
+          applyTheme();
+          const grid = document.getElementById('sectionsGrid');
+          if (state.focusedSection) {
+            grid.classList.add('focused');
+          } else {
+            grid.classList.remove('focused');
+          }
+          renderTopMeta();
+          SECTIONS.forEach(renderSection);
+
+          const toggleDoneBtn = document.getElementById('toggleDoneViewBtn');
+          if (toggleDoneBtn) {
+            toggleDoneBtn.textContent = state.showDone ? 'Ocultar completados' : 'Mostrar completados';
+          }
+        }
+
+        function showUndo(message, snapshotState) {
+          undoRecord = snapshotState;
+          document.getElementById('undoText').textContent = message;
+          document.getElementById('undoBar').classList.remove('hidden');
+          if (undoTimer) clearTimeout(undoTimer);
+          undoTimer = setTimeout(() => {
+            document.getElementById('undoBar').classList.add('hidden');
+            undoRecord = null;
+          }, 5000);
+        }
+
+        function toggleTask(id) {
+          const idx = state.tasks.findIndex((t) => t.id === id);
+          if (idx === -1) return;
+          const prevSnapshot = {
+            tasks: JSON.parse(JSON.stringify(state.tasks)),
+            completionLog: JSON.parse(JSON.stringify(state.completionLog || []))
+          };
+          const task = state.tasks[idx];
+          const nextDone = !task.done;
+          const now = Date.now();
+          task.done = nextDone;
+          task.completedAt = nextDone ? now : null;
+
+          if (!Array.isArray(state.completionLog)) state.completionLog = [];
+          if (nextDone) {
+            state.completionLog.push({
+              id: task.id,
+              category: CATEGORIES.includes(task.category) ? task.category : 'none',
+              completedAt: now
+            });
+            state.completionLog = pruneLog(state.completionLog);
+          } else {
+            state.completionLog = state.completionLog.filter((entry) => entry.id !== task.id);
+          }
+
+          if (nextDone && task.repeat && task.repeat !== 'none') {
+            const baseDate = task.dueDate || todayISO();
+            let nextDate = baseDate;
+            if (task.repeat === 'daily') nextDate = addDaysISO(baseDate, 1);
+            if (task.repeat === 'weekly') nextDate = addDaysISO(baseDate, 7);
+            if (task.repeat === 'monthly') nextDate = addMonthsISO(baseDate, 1);
+
+            state.tasks.push({
+              id: uid(),
+              title: task.title,
+              section: task.section,
+              dueDate: nextDate,
+              dueTime: task.dueTime || '',
+              category: task.category || 'none',
+              priority: Boolean(task.priority),
+              repeat: task.repeat,
+              done: false,
+              completedAt: null,
+              createdAt: Date.now()
+            });
+          }
+
+          saveState();
+          renderAll();
+          if (nextDone) {
+            showUndo(`Completado: ${task.title.slice(0, 26)}`, prevSnapshot);
+          }
+        }
+
+        function moveTask(id, destSection) {
+          const task = state.tasks.find((t) => t.id === id);
+          if (!task || !SECTIONS.includes(destSection)) return;
+          task.section = destSection;
+          if ((destSection === 'morning' || destSection === 'afternoon') && !task.dueDate) {
+            task.dueDate = todayISO();
+          }
+          saveState();
+          renderAll();
+        }
+
+        function parseSmartCapture(rawText) {
+          let text = (rawText || '').trim();
+          let priority = false;
+          let detectedCat = null;
+          let detectedSection = null;
+          let detectedTime = '';
+
+          if (!text) {
+            return { cleanTitle: '', priority, detectedCat, detectedSection, detectedTime };
+          }
+
+          // 1. Urgency via leading or trailing standalone "!"
+          if (/^!\s+/.test(text)) {
+            priority = true;
+            text = text.replace(/^!\s+/, '');
+          } else if (/^!([^\s!].*)$/.test(text)) {
+            priority = true;
+            text = text.replace(/^!/, '');
+          }
+          if (/\s+!$/.test(text)) {
+            priority = true;
+            text = text.replace(/\s+!$/, '');
+          }
+          text = text.trim();
+
+          // 2. Category prefix (t:, p:, s:, r:)
+          const prefixMap = { t: 'trabajo', p: 'personal', s: 'salud', r: 'recados' };
+          const prefixMatch = text.match(/^([tpsr]):\s*(.+)$/i);
+          if (prefixMatch) {
+            detectedCat = prefixMap[prefixMatch[1].toLowerCase()] || null;
+            text = prefixMatch[2].trim();
+          }
+
+          // 3. Category tags (@trabajo, #salud, @t, #s, etc.)
+          const catTagRegex = /(?:^|\s)[@#](trabajo|personal|salud|recados|t|p|s|r)(?=\s|$)/gi;
+          text = text.replace(catTagRegex, (_, code) => {
+            const c = code.toLowerCase();
+            detectedCat = prefixMap[c] || c;
+            return ' ';
+          }).trim();
+
+          // 4. Section tags (@mañana, #tarde, @pendientes, "por la mañana", "por la tarde")
+          const secTagRegex = /(?:^|\s)[@#](mañana|manana|tarde|pendientes|inbox)(?=\s|$)/gi;
+          text = text.replace(secTagRegex, (_, secWord) => {
+            const w = secWord.toLowerCase();
+            if (w === 'mañana' || w === 'manana') detectedSection = 'morning';
+            else if (w === 'tarde') detectedSection = 'afternoon';
+            else detectedSection = 'inbox';
+            return ' ';
+          }).trim();
+
+          if (!detectedSection) {
+            if (/(?:^|\s)(?:por|en)\s+la\s+mañana(?=\s|$)/i.test(text)) {
+              detectedSection = 'morning';
+              text = text.replace(/(?:^|\s)(?:por|en)\s+la\s+mañana(?=\s|$)/gi, ' ').trim();
+            } else if (/(?:^|\s)(?:por|en)\s+la\s+tarde(?=\s|$)/i.test(text)) {
+              detectedSection = 'afternoon';
+              text = text.replace(/(?:^|\s)(?:por|en)\s+la\s+tarde(?=\s|$)/gi, ' ').trim();
+            }
+          }
+
+          // 5. Time detection: 17:30, 9:15, 5pm, 9:30am, 14h, 9h30 (optionally preceded by "a las" / "las" / "@")
+          const timePatterns = [
+            /(?:^|\s)(?:(?:a\s+)?las\s+|@)?(\d{1,2}):([0-5]\d)(?:\s*(am|pm))?(?=\s|$|[.,])/i,
+            /(?:^|\s)(?:(?:a\s+)?las\s+|@)?(\d{1,2})\s*(am|pm)(?=\s|$|[.,])/i,
+            /(?:^|\s)(?:(?:a\s+)?las\s+|@)?(\d{1,2})h([0-5]\d)?(?=\s|$|[.,])/i
+          ];
+
+          for (const regex of timePatterns) {
+            const match = text.match(regex);
+            if (!match) continue;
+            let hh = parseInt(match[1], 10);
+            let mm = 0;
+            let meridiem = '';
+
+            if (regex === timePatterns[0]) {
+              mm = parseInt(match[2], 10);
+              meridiem = (match[3] || '').toLowerCase();
+            } else if (regex === timePatterns[1]) {
+              meridiem = (match[2] || '').toLowerCase();
+            } else {
+              mm = match[2] ? parseInt(match[2], 10) : 0;
+            }
+
+            if (meridiem === 'pm' && hh >= 1 && hh <= 11) hh += 12;
+            if (meridiem === 'am' && hh === 12) hh = 0;
+
+            if (hh >= 0 && hh <= 23 && mm >= 0 && mm <= 59) {
+              detectedTime = `${pad2(hh)}:${pad2(mm)}`;
+              text = text.replace(match[0], ' ').replace(/\s{2,}/g, ' ').trim();
+              break;
+            }
+          }
+
+          const cleanTitle = text.replace(/\s{2,}/g, ' ').trim();
+          return {
+            cleanTitle: cleanTitle || rawText.trim(),
+            priority,
+            detectedCat,
+            detectedSection,
+            detectedTime
+          };
+        }
+
+        function resolveQuickDraft(rawText) {
+          const parsed = parseSmartCapture(rawText);
+          const manualTime = document.getElementById('quickTimeInput').value || '';
+          const finalTime = manualTime || parsed.detectedTime || '';
+
+          const manualCat = CATEGORIES[quickCatIndex] || 'none';
+          const finalCat = parsed.detectedCat || manualCat;
+
+          let finalSection = quickTarget;
+          if (parsed.detectedSection) {
+            finalSection = parsed.detectedSection;
+          } else if (!manualTargetSelected && finalTime) {
+            const hour = parseInt(finalTime.split(':')[0], 10);
+            if (!Number.isNaN(hour)) {
+              finalSection = hour < 14 ? 'morning' : 'afternoon';
+            }
+          }
+
+          return {
+            title: parsed.cleanTitle,
+            priority: parsed.priority,
+            category: finalCat,
+            section: finalSection,
+            dueTime: finalTime,
+            parsed
+          };
+        }
+
+        function renderSmartPreview() {
+          const previewEl = document.getElementById('smartPreview');
+          const raw = document.getElementById('quickInput').value;
+          if (!raw.trim()) {
+            previewEl.classList.add('hidden');
+            previewEl.innerHTML = '';
+            return;
+          }
+          const parsed = parseSmartCapture(raw);
+          const tags = [];
+          if (parsed.priority) {
+            tags.push('<span class="smart-tag smart-urgent">! Urgente</span>');
+          }
+          if (parsed.detectedTime && !document.getElementById('quickTimeInput').value) {
+            tags.push(`<span class="smart-tag tabular">${escapeText(parsed.detectedTime)}</span>`);
+          }
+          const effectiveSection = parsed.detectedSection || (!manualTargetSelected && parsed.detectedTime ? (parseInt(parsed.detectedTime.split(':')[0], 10) < 14 ? 'morning' : 'afternoon') : null);
+          if (effectiveSection) {
+            const secName = effectiveSection === 'morning' ? 'Mañana' : effectiveSection === 'afternoon' ? 'Tarde' : 'Pendientes';
+            tags.push(`<span class="smart-tag">→ ${secName}</span>`);
+          }
+          if (parsed.detectedCat && CAT_META[parsed.detectedCat]) {
+            const cm = CAT_META[parsed.detectedCat];
+            tags.push(`<span class="smart-tag"><span class="cat-mark" style="background:${cm.color};"></span>${escapeText(cm.full)}</span>`);
+          }
+
+          if (tags.length === 0) {
+            previewEl.classList.add('hidden');
+            previewEl.innerHTML = '';
+            return;
+          }
+          previewEl.innerHTML = `<span>Detectado:</span>${tags.join('<span>·</span>')}`;
+          previewEl.classList.remove('hidden');
+        }
+
+        function addQuickTask(e) {
+          e.preventDefault();
+          const input = document.getElementById('quickInput');
+          const rawTitle = input.value.trim();
+          if (!rawTitle) {
+            input.focus();
+            return;
+          }
+          const draft = resolveQuickDraft(rawTitle);
+          const newTask = {
+            id: uid(),
+            title: draft.title,
+            section: draft.section,
+            dueDate: (draft.section !== 'inbox' || draft.dueTime) ? todayISO() : '',
+            dueTime: draft.dueTime,
+            category: draft.category,
+            priority: draft.priority,
+            repeat: 'none',
+            done: false,
+            completedAt: null,
+            createdAt: Date.now()
+          };
+          state.tasks.unshift(newTask);
+          pages[draft.section] = 0;
+          input.value = '';
+          quickHour = '';
+          quickMinute = '';
+          manualTargetSelected = false;
+          document.getElementById('quickTimeInput').value = '';
+          document.getElementById('quickTimeInput').classList.add('hidden');
+          document.getElementById('quickTimeWrap').classList.add('hidden');
+          document.getElementById('quickTimeLabel').textContent = 'Hora';
+          document.getElementById('quickTimeToggle').classList.remove('active');
+          syncQuickTimePickerUI();
+          renderSmartPreview();
+          saveState();
+          renderAll();
+        }
+
+        function openEditSheet(id) {
+          const task = state.tasks.find((t) => t.id === id);
+          if (!task) return;
+          editingTaskId = id;
+          editDraftSection = task.section;
+          editDraftPriority = Boolean(task.priority);
+
+          document.getElementById('editTitle').value = task.title;
+          document.getElementById('editDate').value = task.dueDate || '';
+          document.getElementById('editTime').value = task.dueTime || '';
+          document.getElementById('editCategory').value = task.category || 'none';
+          document.getElementById('editRepeat').value = task.repeat || 'none';
+          syncEditSectionButtons();
+          syncEditPriorityButton();
+          syncEditTimePickerUI();
+          document.getElementById('editSheet').classList.remove('hidden');
+        }
+
+        function syncEditSectionButtons() {
+          document.querySelectorAll('[data-edit-section]').forEach((btn) => {
+            btn.classList.toggle('active', btn.getAttribute('data-edit-section') === editDraftSection);
+          });
+        }
+
+        function syncEditPriorityButton() {
+          const btn = document.getElementById('editPriorityBtn');
+          btn.classList.toggle('active', editDraftPriority);
+          btn.textContent = editDraftPriority ? '! Marcado como urgente' : 'Marcar como urgente (!)';
+        }
+
+        function closeEditSheet() {
+          editingTaskId = null;
+          document.getElementById('editSheet').classList.add('hidden');
+        }
+
+        function saveEditSheet() {
+          if (!editingTaskId) return;
+          const task = state.tasks.find((t) => t.id === editingTaskId);
+          if (!task) return;
+          const title = document.getElementById('editTitle').value.trim();
+          if (!title) return;
+
+          task.title = title;
+          task.section = editDraftSection;
+          task.dueDate = document.getElementById('editDate').value || '';
+          task.dueTime = document.getElementById('editTime').value || '';
+          task.category = document.getElementById('editCategory').value || 'none';
+          task.repeat = document.getElementById('editRepeat').value || 'none';
+          task.priority = editDraftPriority;
+
+          saveState();
+          closeEditSheet();
+          renderAll();
+        }
+
+        function deleteEditingTask() {
+          if (!editingTaskId) return;
+          const prevSnapshot = {
+            tasks: JSON.parse(JSON.stringify(state.tasks)),
+            completionLog: JSON.parse(JSON.stringify(state.completionLog || []))
+          };
+          const target = state.tasks.find((t) => t.id === editingTaskId);
+          state.tasks = state.tasks.filter((t) => t.id !== editingTaskId);
+          saveState();
+          closeEditSheet();
+          renderAll();
+          if (target) {
+            showUndo(`Eliminado: ${target.title.slice(0, 26)}`, prevSnapshot);
+          }
+        }
+
+        function pad2(n) {
+          return String(n).padStart(2, '0');
+        }
+
+        function formatICSLocal(dateObj) {
+          return (
+            dateObj.getFullYear() +
+            pad2(dateObj.getMonth() + 1) +
+            pad2(dateObj.getDate()) +
+            'T' +
+            pad2(dateObj.getHours()) +
+            pad2(dateObj.getMinutes()) +
+            '00'
+          );
+        }
+
+        function exportCurrentTaskICS() {
+          const title = document.getElementById('editTitle').value.trim() || 'Recordatorio';
+          const dateVal = document.getElementById('editDate').value || todayISO();
+          let timeVal = document.getElementById('editTime').value;
+          if (!timeVal) {
+            timeVal = editDraftSection === 'morning' ? '09:00' : editDraftSection === 'afternoon' ? '17:00' : '12:00';
+          }
+          const start = new Date(`${dateVal}T${timeVal}:00`);
+          const end = new Date(start.getTime() + 15 * 60000);
+          const safeTitle = title.replace(/[\r\n,;\\]/g, ' ');
+          const nowStamp = formatICSLocal(new Date()) + 'Z';
+
+          const ics = [
+            'BEGIN:VCALENDAR',
+            'VERSION:2.0',
+            'PRODID:-//Tinta E-Ink//Recordatorios//ES',
+            'BEGIN:VEVENT',
+            `UID:${uid()}@tinta.eink`,
+            `DTSTAMP:${nowStamp}`,
+            `DTSTART:${formatICSLocal(start)}`,
+            `DTEND:${formatICSLocal(end)}`,
+            `SUMMARY:${safeTitle}`,
+            'BEGIN:VALARM',
+            'ACTION:DISPLAY',
+            `DESCRIPTION:${safeTitle}`,
+            'TRIGGER:PT0M',
+            'END:VALARM',
+            'END:VEVENT',
+            'END:VCALENDAR'
+          ].join('\r\n');
+
+          const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `tinta-${dateVal}-${timeVal.replace(':', '')}.ics`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }
+
+        function exportJSONBackup() {
+          const payload = {
+            app: 'Tinta',
+            version: 1,
+            exportedAt: new Date().toISOString(),
+            tasks: state.tasks,
+            completionLog: state.completionLog || []
+          };
+          const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `tinta-respaldo-${todayISO()}.json`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }
+
+        function handleImportFile(file) {
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = () => {
+            try {
+              const parsed = JSON.parse(String(reader.result || '{}'));
+              const incoming = Array.isArray(parsed) ? parsed : parsed.tasks;
+              if (!Array.isArray(incoming)) return;
+              const sanitized = incoming
+                .filter((t) => t && typeof t.title === 'string' && t.title.trim())
+                .map((t) => ({
+                  id: typeof t.id === 'string' ? t.id : uid(),
+                  title: t.title.trim().slice(0, 140),
+                  section: SECTIONS.includes(t.section) ? t.section : 'inbox',
+                  dueDate: typeof t.dueDate === 'string' ? t.dueDate : '',
+                  dueTime: typeof t.dueTime === 'string' ? t.dueTime : '',
+                  category: CATEGORIES.includes(t.category) ? t.category : 'none',
+                  priority: Boolean(t.priority),
+                  repeat: ['none', 'daily', 'weekly', 'monthly'].includes(t.repeat) ? t.repeat : 'none',
+                  done: Boolean(t.done),
+                  completedAt: t.completedAt || null,
+                  createdAt: typeof t.createdAt === 'number' ? t.createdAt : Date.now()
+                }));
+              state.tasks = sanitized;
+              if (Array.isArray(parsed.completionLog)) {
+                state.completionLog = pruneLog(parsed.completionLog);
+              }
+              saveState();
+              renderAll();
+              document.getElementById('settingsSheet').classList.add('hidden');
+            } catch (_) {
+              // Ignore malformed JSON silently
+            }
+          };
+          reader.readAsText(file);
+        }
+
+        function getSevenDayCategoryData() {
+          const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+          const seen = new Set();
+          const counts = {
+            trabajo: 0,
+            personal: 0,
+            salud: 0,
+            recados: 0,
+            none: 0
+          };
+
+          const addEntry = (id, category, completedAt) => {
+            if (typeof completedAt !== 'number' || completedAt < sevenDaysAgo) return;
+            const dedupeKey = `${id || ''}_${completedAt}`;
+            if (seen.has(dedupeKey)) return;
+            seen.add(dedupeKey);
+            const cat = CATEGORIES.includes(category) ? category : 'none';
+            counts[cat] += 1;
+          };
+
+          (state.completionLog || []).forEach((item) => addEntry(item.id, item.category, item.completedAt));
+          state.tasks.forEach((task) => {
+            if (task.done && task.completedAt) {
+              addEntry(task.id, task.category, task.completedAt);
+            }
+          });
+
+          const cs = getComputedStyle(document.documentElement);
+          const fgColor = cs.getPropertyValue('--fg').trim() || '#000000';
+          return [
+            { key: 'trabajo', label: 'Trabajo', count: counts.trabajo, color: cs.getPropertyValue('--cat-trabajo').trim() || '#cc0000' },
+            { key: 'personal', label: 'Personal', count: counts.personal, color: cs.getPropertyValue('--cat-personal').trim() || '#0044cc' },
+            { key: 'salud', label: 'Salud', count: counts.salud, color: cs.getPropertyValue('--cat-salud').trim() || '#007a33' },
+            { key: 'recados', label: 'Recados', count: counts.recados, color: cs.getPropertyValue('--cat-recados').trim() || '#d95f00' },
+            { key: 'none', label: 'Sin cat.', count: counts.none, color: fgColor }
+          ];
+        }
+
+        function renderReportChart() {
+          const container = document.getElementById('reportChart');
+          const summaryEl = document.getElementById('reportSummary');
+          const data = getSevenDayCategoryData();
+          const total = data.reduce((sum, d) => sum + d.count, 0);
+          summaryEl.textContent = `${total} ${total === 1 ? 'tarea completada' : 'tareas completadas'} por categoría`;
+
+          container.innerHTML = '';
+          if (typeof window.d3 === 'undefined') {
+            container.innerHTML = '<div style="padding:16px;text-align:center;font-size:14px;font-weight:700;">Librería D3 no disponible</div>';
+            return;
+          }
+
+          const d3 = window.d3;
+          const cs = getComputedStyle(document.documentElement);
+          const fg = cs.getPropertyValue('--fg').trim() || '#000000';
+          const border = cs.getPropertyValue('--border').trim() || '#000000';
+
+          const width = 340;
+          const height = 220;
+          const margin = { top: 8, right: 34, bottom: 28, left: 78 };
+          const innerW = width - margin.left - margin.right;
+          const innerH = height - margin.top - margin.bottom;
+
+          const svg = d3.select(container)
+            .append('svg')
+            .attr('viewBox', `0 0 ${width} ${height}`)
+            .attr('width', '100%')
+            .attr('role', 'img')
+            .attr('aria-label', 'Gráfico de tareas completadas por categoría en los últimos 7 días');
+
+          const g = svg.append('g')
+            .attr('transform', `translate(${margin.left},${margin.top})`);
+
+          const maxVal = d3.max(data, (d) => d.count) || 0;
+          const xMax = Math.max(4, maxVal);
+
+          const x = d3.scaleLinear()
+            .domain([0, xMax])
+            .nice()
+            .range([0, innerW]);
+
+          const y = d3.scaleBand()
+            .domain(data.map((d) => d.label))
+            .range([0, innerH])
+            .padding(0.32);
+
+          const ticks = x.ticks(Math.min(5, xMax)).filter((t) => Number.isInteger(t));
+
+          // Vertical dashed gridlines for crisp E-Ink reading
+          g.append('g')
+            .selectAll('line')
+            .data(ticks)
+            .join('line')
+            .attr('x1', (d) => x(d))
+            .attr('x2', (d) => x(d))
+            .attr('y1', 0)
+            .attr('y2', innerH)
+            .attr('stroke', border)
+            .attr('stroke-width', 1.5)
+            .attr('stroke-dasharray', '3,4');
+
+          // X Axis
+          const xAxis = g.append('g')
+            .attr('transform', `translate(0,${innerH})`)
+            .call(d3.axisBottom(x).tickValues(ticks).tickFormat(d3.format('d')).tickSizeOuter(0));
+
+          xAxis.selectAll('path, line')
+            .attr('stroke', border)
+            .attr('stroke-width', 2.2);
+
+          xAxis.selectAll('text')
+            .attr('fill', fg)
+            .style('font-family', 'inherit')
+            .style('font-size', '12px')
+            .style('font-weight', '800');
+
+          // Y Axis
+          const yAxis = g.append('g')
+            .call(d3.axisLeft(y).tickSize(0));
+
+          yAxis.select('.domain')
+            .attr('stroke', border)
+            .attr('stroke-width', 2.2);
+
+          yAxis.selectAll('text')
+            .attr('x', -8)
+            .attr('fill', fg)
+            .style('font-family', 'inherit')
+            .style('font-size', '13px')
+            .style('font-weight', '800');
+
+          // Category Bars
+          g.selectAll('rect.bar')
+            .data(data)
+            .join('rect')
+            .attr('class', 'bar')
+            .attr('x', 0)
+            .attr('y', (d) => y(d.label))
+            .attr('width', (d) => Math.max(0, x(d.count)))
+            .attr('height', y.bandwidth())
+            .attr('rx', 3)
+            .attr('fill', (d) => d.color)
+            .attr('stroke', border)
+            .attr('stroke-width', (d) => (d.count > 0 ? 2 : 0));
+
+          // Direct numeric labels
+          g.selectAll('text.val-label')
+            .data(data)
+            .join('text')
+            .attr('class', 'val-label')
+            .attr('x', (d) => x(d.count) + 6)
+            .attr('y', (d) => y(d.label) + y.bandwidth() / 2 + 4.5)
+            .attr('fill', fg)
+            .style('font-family', 'inherit')
+            .style('font-size', '13px')
+            .style('font-weight', '800')
+            .text((d) => d.count);
+        }
+
+        function checkForegroundNotifications() {
+          if (!('Notification' in window) || Notification.permission !== 'granted') return;
+          const today = todayISO();
+          const currentHM = nowHHMM();
+
+          state.tasks.forEach((task) => {
+            if (task.done || !task.dueTime) return;
+            const date = task.dueDate || today;
+            if (date !== today || task.dueTime !== currentHM) return;
+            const key = `${task.id}_${date}_${task.dueTime}`;
+            if (firedNotifs.has(key)) return;
+            firedNotifs.add(key);
+
+            if ('vibrate' in navigator) {
+              navigator.vibrate([120, 60, 120]);
+            }
+            const opts = {
+              body: `${task.dueTime} · ${task.section === 'morning' ? 'Mañana' : task.section === 'afternoon' ? 'Tarde' : 'Pendientes'}`,
+              icon: '/pwa-192x192.png',
+              tag: key,
+              renotify: false
+            };
+            if (swRegistration && swRegistration.showNotification) {
+              swRegistration.showNotification(task.title, opts).catch(() => {});
+            } else {
+              new Notification(task.title, opts);
+            }
+          });
+        }
+
+        function buildHourButtons(containerId, attrName) {
+          const container = document.getElementById(containerId);
+          if (!container) return;
+          let html = '';
+          for (let h = 0; h < 24; h++) {
+            const hh = pad2(h);
+            html += `<button type="button" class="tp-btn" ${attrName}="${hh}">${hh}</button>`;
+          }
+          container.innerHTML = html;
+        }
+
+        function setQuickTarget(target, isManual) {
+          quickTarget = target;
+          if (isManual) manualTargetSelected = true;
+          document.querySelectorAll('[data-target]').forEach((b) => {
+            b.classList.toggle('active', b.getAttribute('data-target') === quickTarget);
+          });
+        }
+
+        function syncQuickTimePickerUI() {
+          const timeVal = document.getElementById('quickTimeInput').value || '';
+          const parts = timeVal ? timeVal.split(':') : ['', ''];
+          const h = quickHour || parts[0] || '';
+          const m = quickMinute || parts[1] || '';
+
+          document.querySelectorAll('[data-qhour]').forEach((btn) => {
+            btn.classList.toggle('active', btn.getAttribute('data-qhour') === h);
+          });
+          document.querySelectorAll('[data-qmin]').forEach((btn) => {
+            btn.classList.toggle('active', btn.getAttribute('data-qmin') === m);
+          });
+
+          document.getElementById('quickTimeReadout').textContent = timeVal ? `Hora: ${timeVal}` : 'Hora: --:--';
+          document.getElementById('quickTimeLabel').textContent = timeVal || 'Hora';
+          document.getElementById('quickTimeToggle').classList.toggle('active', Boolean(timeVal));
+        }
+
+        function applyQuickHourMinute(h, m) {
+          quickHour = h;
+          quickMinute = m;
+          if (quickHour && quickMinute) {
+            const val = `${quickHour}:${quickMinute}`;
+            document.getElementById('quickTimeInput').value = val;
+            if (!manualTargetSelected) {
+              const hrNum = parseInt(quickHour, 10);
+              setQuickTarget(hrNum < 14 ? 'morning' : 'afternoon', false);
+            }
+          } else {
+            document.getElementById('quickTimeInput').value = '';
+          }
+          syncQuickTimePickerUI();
+          renderSmartPreview();
+        }
+
+        function syncEditTimePickerUI() {
+          const val = document.getElementById('editTime').value || '';
+          const [h, m] = val ? val.split(':') : ['', ''];
+          document.querySelectorAll('[data-ehour]').forEach((btn) => {
+            btn.classList.toggle('active', btn.getAttribute('data-ehour') === h);
+          });
+          document.querySelectorAll('[data-emin]').forEach((btn) => {
+            btn.classList.toggle('active', btn.getAttribute('data-emin') === m);
+          });
+        }
+
+        buildHourButtons('quickHourGrid', 'data-qhour');
+        buildHourButtons('editHourGrid', 'data-ehour');
+
+        function syncQuickCatUI() {
+          const catKey = CATEGORIES[quickCatIndex];
+          const meta = CAT_META[catKey];
+          const dot = document.getElementById('quickCatDot');
+          const label = document.getElementById('quickCatLabel');
+          label.textContent = meta.label;
+          if (meta.color) {
+            dot.style.display = 'inline-block';
+            dot.style.background = meta.color;
+          } else {
+            dot.style.display = 'none';
+          }
+        }
+
+        // Event Wiring
+        document.getElementById('sectionsGrid').addEventListener('click', (e) => {
+          const pagerBtn = e.target.closest('[data-page-dir]');
+          if (pagerBtn) {
+            const sec = pagerBtn.getAttribute('data-page-sec');
+            const dir = Number(pagerBtn.getAttribute('data-page-dir'));
+            pages[sec] = Math.max(0, (pages[sec] || 0) + dir);
+            renderSection(sec);
+            return;
+          }
+
+          const focusBtn = e.target.closest('[data-focus-section]');
+          if (focusBtn) {
+            const sec = focusBtn.getAttribute('data-focus-section');
+            state.focusedSection = state.focusedSection === sec ? null : sec;
+            saveState();
+            renderAll();
+            return;
+          }
+
+          const actionBtn = e.target.closest('[data-action]');
+          if (!actionBtn) return;
+          const action = actionBtn.getAttribute('data-action');
+          const id = actionBtn.getAttribute('data-id');
+          if (action === 'toggle') toggleTask(id);
+          if (action === 'move') moveTask(id, actionBtn.getAttribute('data-dest'));
+          if (action === 'edit') openEditSheet(id);
+        });
+
+        document.querySelectorAll('[data-target]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            setQuickTarget(btn.getAttribute('data-target'), true);
+            renderSmartPreview();
+          });
+        });
+
+        document.getElementById('quickCatBtn').addEventListener('click', () => {
+          quickCatIndex = (quickCatIndex + 1) % CATEGORIES.length;
+          syncQuickCatUI();
+        });
+
+        document.getElementById('quickTimeToggle').addEventListener('click', () => {
+          const wrap = document.getElementById('quickTimeWrap');
+          wrap.classList.toggle('hidden');
+        });
+
+        document.getElementById('quickManualTimeBtn').addEventListener('click', () => {
+          const inp = document.getElementById('quickTimeInput');
+          inp.classList.toggle('hidden');
+          if (!inp.classList.contains('hidden')) {
+            inp.focus();
+          }
+        });
+
+        document.getElementById('quickHourGrid').addEventListener('click', (e) => {
+          const btn = e.target.closest('[data-qhour]');
+          if (!btn) return;
+          const clickedH = btn.getAttribute('data-qhour');
+          const nextMin = quickMinute || '00';
+          applyQuickHourMinute(clickedH, nextMin);
+        });
+
+        document.getElementById('quickMinuteGrid').addEventListener('click', (e) => {
+          const btn = e.target.closest('[data-qmin]');
+          if (!btn) return;
+          const clickedM = btn.getAttribute('data-qmin');
+          const nextHour = quickHour || pad2(new Date().getHours());
+          applyQuickHourMinute(nextHour, clickedM);
+        });
+
+        document.getElementById('quickTimeInput').addEventListener('change', (e) => {
+          const val = e.target.value || '';
+          if (val) {
+            const [h, m] = val.split(':');
+            quickHour = h || '';
+            quickMinute = m || '';
+            if (!manualTargetSelected && h) {
+              setQuickTarget(parseInt(h, 10) < 14 ? 'morning' : 'afternoon', false);
+            }
+          } else {
+            quickHour = '';
+            quickMinute = '';
+          }
+          syncQuickTimePickerUI();
+          renderSmartPreview();
+        });
+
+        document.getElementById('clearQuickTimeBtn').addEventListener('click', () => {
+          quickHour = '';
+          quickMinute = '';
+          document.getElementById('quickTimeInput').value = '';
+          document.getElementById('quickTimeInput').classList.add('hidden');
+          document.getElementById('quickTimeWrap').classList.add('hidden');
+          syncQuickTimePickerUI();
+          renderSmartPreview();
+        });
+
+        document.getElementById('quickInput').addEventListener('input', renderSmartPreview);
+
+        document.getElementById('captureForm').addEventListener('submit', addQuickTask);
+
+        document.getElementById('undoBtn').addEventListener('click', () => {
+          if (!undoRecord) return;
+          state.tasks = undoRecord.tasks;
+          state.completionLog = undoRecord.completionLog;
+          undoRecord = null;
+          if (undoTimer) clearTimeout(undoTimer);
+          document.getElementById('undoBar').classList.add('hidden');
+          saveState();
+          renderAll();
+        });
+
+        document.getElementById('themeBtn').addEventListener('click', () => {
+          state.dark = !state.dark;
+          saveState();
+          renderAll();
+          if (!document.getElementById('reportSheet').classList.contains('hidden')) {
+            renderReportChart();
+          }
+        });
+
+        // Edit Sheet Listeners
+        document.querySelectorAll('[data-edit-section]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            editDraftSection = btn.getAttribute('data-edit-section');
+            syncEditSectionButtons();
+          });
+        });
+        document.getElementById('editPriorityBtn').addEventListener('click', () => {
+          editDraftPriority = !editDraftPriority;
+          syncEditPriorityButton();
+        });
+        document.getElementById('editHourGrid').addEventListener('click', (e) => {
+          const btn = e.target.closest('[data-ehour]');
+          if (!btn) return;
+          const h = btn.getAttribute('data-ehour');
+          const cur = document.getElementById('editTime').value;
+          const curMin = cur && cur.includes(':') ? cur.split(':')[1] : '00';
+          document.getElementById('editTime').value = `${h}:${curMin}`;
+          syncEditTimePickerUI();
+        });
+        document.getElementById('editMinuteGrid').addEventListener('click', (e) => {
+          const btn = e.target.closest('[data-emin]');
+          if (!btn) return;
+          const m = btn.getAttribute('data-emin');
+          const cur = document.getElementById('editTime').value;
+          const curHour = cur && cur.includes(':') ? cur.split(':')[0] : pad2(new Date().getHours());
+          document.getElementById('editTime').value = `${curHour}:${m}`;
+          syncEditTimePickerUI();
+        });
+        document.getElementById('editTime').addEventListener('change', syncEditTimePickerUI);
+        document.getElementById('clearEditTimeBtn').addEventListener('click', () => {
+          document.getElementById('editTime').value = '';
+          syncEditTimePickerUI();
+        });
+        document.getElementById('closeEditBtn').addEventListener('click', closeEditSheet);
+        document.getElementById('saveEditBtn').addEventListener('click', saveEditSheet);
+        document.getElementById('deleteTaskBtn').addEventListener('click', deleteEditingTask);
+        document.getElementById('exportIcsBtn').addEventListener('click', exportCurrentTaskICS);
+        document.getElementById('editSheet').addEventListener('click', (e) => {
+          if (e.target.id === 'editSheet') closeEditSheet();
+        });
+
+        // Settings & Report Sheet Listeners
+        const settingsSheet = document.getElementById('settingsSheet');
+        const reportSheet = document.getElementById('reportSheet');
+
+        document.getElementById('settingsBtn').addEventListener('click', () => {
+          syncNotifBtnLabel();
+          settingsSheet.classList.remove('hidden');
+        });
+        document.getElementById('closeSettingsBtn').addEventListener('click', () => {
+          settingsSheet.classList.add('hidden');
+        });
+        settingsSheet.addEventListener('click', (e) => {
+          if (e.target === settingsSheet) settingsSheet.classList.add('hidden');
+        });
+
+        document.getElementById('openReportBtn').addEventListener('click', () => {
+          settingsSheet.classList.add('hidden');
+          reportSheet.classList.remove('hidden');
+          renderReportChart();
+        });
+        document.getElementById('closeReportBtn').addEventListener('click', () => {
+          reportSheet.classList.add('hidden');
+        });
+        document.getElementById('doneReportBtn').addEventListener('click', () => {
+          reportSheet.classList.add('hidden');
+        });
+        document.getElementById('backToSettingsBtn').addEventListener('click', () => {
+          reportSheet.classList.add('hidden');
+          settingsSheet.classList.remove('hidden');
+        });
+        reportSheet.addEventListener('click', (e) => {
+          if (e.target === reportSheet) reportSheet.classList.add('hidden');
+        });
+
+        document.getElementById('toggleDoneViewBtn').addEventListener('click', () => {
+          state.showDone = !state.showDone;
+          saveState();
+          renderAll();
+        });
+
+        document.getElementById('clearDoneBtn').addEventListener('click', () => {
+          const prev = {
+            tasks: JSON.parse(JSON.stringify(state.tasks)),
+            completionLog: JSON.parse(JSON.stringify(state.completionLog || []))
+          };
+          const before = state.tasks.length;
+          state.tasks = state.tasks.filter((t) => !t.done);
+          if (state.tasks.length !== before) {
+            saveState();
+            renderAll();
+            showUndo('Completados limpiados', prev);
+          }
+          settingsSheet.classList.add('hidden');
+        });
+
+        document.getElementById('exportJsonBtn').addEventListener('click', exportJSONBackup);
+        document.getElementById('importJsonBtn').addEventListener('click', () => {
+          document.getElementById('importFileInput').click();
+        });
+        document.getElementById('importFileInput').addEventListener('change', (e) => {
+          if (e.target.files && e.target.files[0]) {
+            handleImportFile(e.target.files[0]);
+            e.target.value = '';
+          }
+        });
+
+        function syncNotifBtnLabel() {
+          const btn = document.getElementById('notifPermBtn');
+          const noteEl = document.getElementById('notifHelperNote');
+          const LocalNotifications = getNativeLocalNotifications();
+
+          if (LocalNotifications) {
+            if (noteEl) {
+              noteEl.innerHTML = 'Modo <strong>APK nativo</strong> activo: las alarmas usan el sistema Android incluso con la app cerrada. En Bigme OS, pon Tinta en batería <strong>Sin restricciones</strong>.';
+            }
+            LocalNotifications.checkPermissions().then((perm) => {
+              if (perm && perm.display === 'granted') {
+                btn.textContent = 'Notificaciones nativas APK activas ✓';
+              } else if (perm && perm.display === 'denied') {
+                btn.textContent = 'Activar permiso en Ajustes de Android';
+              } else {
+                btn.textContent = 'Activar notificaciones nativas APK';
+              }
+            }).catch(() => {
+              btn.textContent = 'Activar notificaciones nativas APK';
+            });
+            return;
+          }
+
+          if (!('Notification' in window)) {
+            btn.textContent = 'Notificaciones no soportadas';
+            btn.disabled = true;
+            return;
+          }
+          if (Notification.permission === 'granted') {
+            btn.textContent = 'Alertas en primer plano activas ✓';
+          } else if (Notification.permission === 'denied') {
+            btn.textContent = 'Permiso bloqueado en Chrome';
+          } else {
+            btn.textContent = 'Activar alertas en primer plano';
+          }
+        }
+
+        document.getElementById('notifPermBtn').addEventListener('click', async () => {
+          const LocalNotifications = getNativeLocalNotifications();
+          if (LocalNotifications) {
+            try {
+              const res = await LocalNotifications.requestPermissions();
+              if (typeof LocalNotifications.checkExactNotificationSetting === 'function' && typeof LocalNotifications.changeExactNotificationSetting === 'function') {
+                const exact = await LocalNotifications.checkExactNotificationSetting();
+                if (exact && exact.exact_alarm !== 'granted') {
+                  await LocalNotifications.changeExactNotificationSetting();
+                }
+              }
+              syncNotifBtnLabel();
+              if (res && res.display === 'granted') {
+                await syncNativeNotifications();
+              }
+            } catch (_) {
+              syncNotifBtnLabel();
+            }
+            return;
+          }
+
+          if (!('Notification' in window)) return;
+          Notification.requestPermission().then((perm) => {
+            syncNotifBtnLabel();
+            if (perm === 'granted' && 'vibrate' in navigator) {
+              navigator.vibrate(100);
+            }
+          });
+        });
+
+        // PWA Install Handling
+        const isNativeApp = Boolean(getNativeLocalNotifications());
+        const isStandalone = isNativeApp || window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+        const isIOS = /iphone|ipad|ipod/i.test(window.navigator.userAgent);
+        const installBtn = document.getElementById('installBtn');
+        const sheetInstallBtn = document.getElementById('sheetInstallBtn');
+
+        if (!isStandalone && isIOS) {
+          document.getElementById('iosInstallNote').style.display = 'block';
+        }
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+          e.preventDefault();
+          deferredInstallPrompt = e;
+          if (!isStandalone) {
+            installBtn.classList.remove('hidden');
+            sheetInstallBtn.classList.remove('hidden');
+          }
+        });
+
+        async function triggerInstall() {
+          if (!deferredInstallPrompt) return;
+          await deferredInstallPrompt.prompt();
+          const choice = await deferredInstallPrompt.userChoice;
+          if (choice.outcome === 'accepted') {
+            deferredInstallPrompt = null;
+            installBtn.classList.add('hidden');
+            sheetInstallBtn.classList.add('hidden');
+          }
+        }
+
+        installBtn.addEventListener('click', triggerInstall);
+        sheetInstallBtn.addEventListener('click', triggerInstall);
+
+        window.addEventListener('appinstalled', () => {
+          deferredInstallPrompt = null;
+          installBtn.classList.add('hidden');
+          sheetInstallBtn.classList.add('hidden');
+        });
+
+        // Service Worker Registration (only in web/PWA mode, not inside Capacitor APK)
+        if ('serviceWorker' in navigator && !isNativeApp) {
+          window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js').then((reg) => {
+              swRegistration = reg;
+            }).catch(() => {});
+          });
+        }
+
+        // Responsive Pagination & Time Checks
+        window.addEventListener('resize', () => {
+          renderAll();
+        });
+
+        setInterval(() => {
+          renderTopMeta();
+          if (!getNativeLocalNotifications()) {
+            checkForegroundNotifications();
+          }
+        }, 30000);
+
+        syncQuickCatUI();
+        syncNotifBtnLabel();
+        renderAll();
+        updateAppBadge();
+        if (isNativeApp) {
+          syncNativeNotifications();
+        }
+      })();
+    </script>
+  </body>
+</html>
