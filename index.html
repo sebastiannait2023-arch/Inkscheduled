@@ -49,8 +49,9 @@
         --inbox: #000000;
         --cat-personal: #0044cc;
         --cat-trabajo: #cc0000;
-        --cat-salud: #007a33;
-        --cat-recados: #d95f00;
+        --cat-saturno: #6a0dad;
+        --cat-musica: #007a33;
+        --cat-otros: #000000;
         --urgent: #cc0000;
       }
 
@@ -65,8 +66,9 @@
         --inbox: #ffffff;
         --cat-personal: #4d88ff;
         --cat-trabajo: #ff4d4d;
-        --cat-salud: #2ecc71;
-        --cat-recados: #ff8c1a;
+        --cat-saturno: #c77dff;
+        --cat-musica: #2ecc71;
+        --cat-otros: #ffffff;
         --urgent: #ff4d4d;
       }
 
@@ -191,6 +193,362 @@
         color: var(--inv-fg);
       }
 
+      /* Week Strip (L M M J V S D) + Month Calendar Button */
+      .week-strip {
+        flex-shrink: 0;
+        display: grid;
+        grid-template-columns: repeat(7, 1fr) 40px;
+        gap: 5px;
+        padding: 8px 14px 0 14px;
+      }
+
+      @media (min-width: 900px) {
+        .week-strip {
+          padding: 10px 20px 0 20px;
+          gap: 8px;
+        }
+      }
+
+      .week-day-btn {
+        position: relative;
+        height: 36px;
+        padding: 0;
+        border: 2px solid var(--border);
+        border-radius: 8px;
+        background: var(--bg);
+        color: var(--fg);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .week-day-btn.active {
+        background: var(--inv-bg);
+        color: var(--inv-fg);
+      }
+
+      .week-day-btn.is-today:not(.active) {
+        box-shadow: none;
+        border-bottom-width: 4px;
+      }
+
+      .week-day-letter {
+        font-size: 14px;
+        font-weight: 800;
+        line-height: 1;
+      }
+
+      .week-day-dot {
+        position: absolute;
+        top: 3px;
+        right: 3px;
+        width: 4px;
+        height: 4px;
+        border-radius: 50%;
+        background: var(--fg);
+      }
+
+      .week-day-btn.active .week-day-dot {
+        background: var(--inv-fg);
+      }
+
+      .week-cal-btn {
+        height: 36px;
+        width: 40px;
+        padding: 0;
+        border: 2px solid var(--border);
+        border-radius: 8px;
+        background: var(--bg);
+        color: var(--fg);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .week-cal-btn.has-future {
+        background: var(--inv-bg);
+        color: var(--inv-fg);
+      }
+
+      /* Kaleido 3 Category Filter Strip */
+      .cat-strip {
+        flex-shrink: 0;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 5px;
+        padding: 6px 14px 0 14px;
+      }
+
+      @media (min-width: 900px) {
+        .cat-strip {
+          grid-template-columns: repeat(6, 1fr);
+          gap: 8px;
+          padding: 8px 20px 0 20px;
+        }
+      }
+
+      .cat-tab-btn {
+        height: 34px;
+        padding: 0 8px;
+        border: 2px solid var(--border);
+        border-radius: 8px;
+        background: var(--bg);
+        color: var(--fg);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 5px;
+        min-width: 0;
+      }
+
+      .cat-tab-left {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        min-width: 0;
+      }
+
+      .cat-tab-swatch {
+        width: 15px;
+        height: 15px;
+        min-width: 15px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+
+      .cat-tab-label {
+        font-size: 12px;
+        font-weight: 800;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .cat-tab-count {
+        font-size: 11px;
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+        padding: 1px 5px;
+        border-radius: 5px;
+        border: 1.5px solid var(--border);
+        line-height: 1.15;
+        flex-shrink: 0;
+      }
+
+      .cat-tab-btn.active {
+        background: var(--cat-active-bg, var(--inv-bg));
+        color: var(--cat-active-fg, var(--inv-fg));
+        border-color: var(--border);
+      }
+
+      .cat-tab-btn.active .cat-tab-swatch {
+        color: var(--cat-active-fg, var(--inv-fg)) !important;
+      }
+
+      .cat-tab-btn.active .cat-tab-count {
+        border-color: var(--cat-active-fg, var(--inv-fg));
+        color: var(--cat-active-fg, var(--inv-fg));
+      }
+
+      /* Active Category Title above Time-of-Day Boxes */
+      .cat-banner {
+        flex-shrink: 0;
+        margin: 6px 14px 0 14px;
+        padding: 4px 10px;
+        border: 2px solid var(--border);
+        border-left-width: 6px;
+        border-radius: 8px;
+        background: var(--bg);
+        color: var(--fg);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        min-height: 30px;
+      }
+
+      @media (min-width: 900px) {
+        .cat-banner {
+          margin: 8px 20px 0 20px;
+          padding: 5px 12px;
+        }
+      }
+
+      .cat-banner-left {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        min-width: 0;
+      }
+
+      .cat-banner-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+
+      .cat-banner-title {
+        font-size: 14px;
+        font-weight: 800;
+        letter-spacing: -0.01em;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .cat-banner-sub {
+        font-size: 11.5px;
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+
+      .cat-edit-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+      }
+
+      @media (min-width: 520px) {
+        .cat-edit-grid {
+          grid-template-columns: repeat(5, 1fr);
+        }
+      }
+
+      .cat-edit-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+        min-height: 40px;
+        padding: 0 6px;
+        border: 2px solid var(--border);
+        border-radius: 8px;
+        background: var(--bg);
+        color: var(--fg);
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      .cat-edit-btn.active {
+        background: var(--cat-active-bg, var(--inv-bg));
+        color: var(--cat-active-fg, var(--inv-fg));
+      }
+
+      .cat-edit-btn.active .cat-edit-ico {
+        color: var(--cat-active-fg, var(--inv-fg)) !important;
+      }
+
+      /* Monthly Calendar Sheet Grid */
+      .cal-nav-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .cal-month-title {
+        font-size: 16px;
+        font-weight: 800;
+        text-transform: capitalize;
+      }
+
+      .cal-weekdays {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 4px;
+        text-align: center;
+        font-size: 11px;
+        font-weight: 800;
+      }
+
+      .cal-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 4px;
+      }
+
+      .cal-cell {
+        height: 42px;
+        border: 2px solid transparent;
+        border-radius: 8px;
+        background: var(--bg);
+        color: var(--fg);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        padding: 0;
+      }
+
+      .cal-cell.is-other {
+        opacity: 0.35;
+      }
+
+      .cal-cell.is-selected {
+        border-color: var(--border);
+        background: var(--inv-bg);
+        color: var(--inv-fg);
+      }
+
+      .cal-num {
+        width: 24px;
+        height: 24px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        font-size: 13px;
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .cal-cell.is-today .cal-num {
+        border: 2.5px solid var(--urgent);
+        color: var(--urgent);
+      }
+
+      .cal-cell.is-selected.is-today .cal-num {
+        background: var(--urgent);
+        border-color: var(--urgent);
+        color: #ffffff;
+      }
+
+      .cal-dot {
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: var(--morning);
+      }
+
+      .cal-cell.is-selected .cal-dot {
+        background: var(--inv-fg);
+      }
+
+      .cal-day-preview {
+        border: 2px solid var(--border);
+        border-radius: 8px;
+        padding: 8px 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        max-height: 140px;
+        overflow-y: auto;
+      }
+
+      .cal-preview-item {
+        font-size: 13px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
       /* 3-Section Fixed Viewport Grid with Side Padding */
       .sections-grid {
         flex: 1;
@@ -198,8 +556,8 @@
         display: grid;
         grid-template-rows: 1fr 1fr 1.15fr;
         grid-template-columns: 1fr;
-        gap: 10px;
-        padding: 10px 14px 8px 14px;
+        gap: 8px;
+        padding: 8px 14px 8px 14px;
         overflow: hidden;
       }
 
@@ -974,6 +1332,15 @@
         </div>
       </header>
 
+      <!-- Top Weekday Selector Strip (L M M J V S D + Calendar) -->
+      <nav class="week-strip" id="weekStrip" aria-label="Días de la semana"></nav>
+
+      <!-- Kaleido 3 Category Tabs -->
+      <nav class="cat-strip" id="catStrip" aria-label="Categorías de recordatorios"></nav>
+
+      <!-- Category Title above Time-of-Day Boxes -->
+      <div class="cat-banner" id="activeCategoryBanner" aria-live="polite"></div>
+
       <!-- 3 Fixed Stationery Sections Grid -->
       <main class="sections-grid" id="sectionsGrid">
         <!-- MAÑANA -->
@@ -1070,14 +1437,31 @@
             </button>
           </div>
           <div class="option-group">
+            <button type="button" class="chip-btn" id="quickDateToggle" aria-label="Elegir fecha">
+              <span id="quickDateLabel">Hoy</span>
+            </button>
             <button type="button" class="chip-btn" id="quickCatBtn" aria-label="Cambiar categoría">
-              <span class="cat-mark" id="quickCatDot" style="display:none;"></span>
-              <span id="quickCatLabel">Cat.</span>
+              <span class="cat-tab-swatch" id="quickCatIcon" aria-hidden="true"></span>
+              <span id="quickCatLabel">Otros</span>
             </button>
             <button type="button" class="chip-btn" id="quickTimeToggle" aria-label="Añadir hora">
               <span id="quickTimeLabel">Hora</span>
             </button>
           </div>
+        </div>
+
+        <div class="time-inline-wrap hidden" id="quickDateWrap">
+          <div class="time-picker-head">
+            <span class="time-readout tabular" id="quickDateReadout">Fecha: Hoy</span>
+            <button type="button" class="chip-btn" id="clearQuickDateBtn" style="height:30px;font-size:12px;">Sin fecha</button>
+          </div>
+          <div class="minute-grid">
+            <button type="button" class="tp-btn" data-qdate="today">Hoy</button>
+            <button type="button" class="tp-btn" data-qdate="tomorrow">Mañana</button>
+            <button type="button" class="tp-btn" data-qdate="week">+7 días</button>
+            <button type="button" class="tp-btn" id="quickDateCalBtn">Mes...</button>
+          </div>
+          <input type="date" class="field-input tabular" id="quickDateInput" aria-label="Fecha personalizada" style="height:38px;" />
         </div>
 
         <div class="time-inline-wrap hidden" id="quickTimeWrap">
@@ -1105,7 +1489,7 @@
             type="text"
             class="quick-input"
             id="quickInput"
-            placeholder="+ Recordatorio (ej: ! s: Cita 17:30)..."
+            placeholder="+ Recordatorio (ej: ! s: Revisar 17:30)..."
             maxlength="140"
             aria-label="Nuevo recordatorio"
           />
@@ -1183,26 +1567,40 @@
           </div>
         </div>
 
-        <div class="field-row-2">
-          <div class="field-group">
-            <label class="field-label" for="editCategory">Categoría Kaleido 3</label>
-            <select class="field-input" id="editCategory">
-              <option value="none">Sin categoría</option>
-              <option value="personal">Personal (Azul)</option>
-              <option value="trabajo">Trabajo (Rojo)</option>
-              <option value="salud">Salud (Verde)</option>
-              <option value="recados">Recados (Ámbar)</option>
-            </select>
+        <div class="field-group">
+          <span class="field-label">Categoría Kaleido 3</span>
+          <div class="cat-edit-grid" id="editCatGrid">
+            <button type="button" class="cat-edit-btn" data-edit-cat="personal">
+              <span class="cat-edit-ico" data-cat-ico="personal" style="color:var(--cat-personal);" aria-hidden="true"></span>
+              <span>Personal</span>
+            </button>
+            <button type="button" class="cat-edit-btn" data-edit-cat="trabajo">
+              <span class="cat-edit-ico" data-cat-ico="trabajo" style="color:var(--cat-trabajo);" aria-hidden="true"></span>
+              <span>Trabajo</span>
+            </button>
+            <button type="button" class="cat-edit-btn" data-edit-cat="saturno">
+              <span class="cat-edit-ico" data-cat-ico="saturno" style="color:var(--cat-saturno);" aria-hidden="true"></span>
+              <span>Saturno</span>
+            </button>
+            <button type="button" class="cat-edit-btn" data-edit-cat="musica">
+              <span class="cat-edit-ico" data-cat-ico="musica" style="color:var(--cat-musica);" aria-hidden="true"></span>
+              <span>Música</span>
+            </button>
+            <button type="button" class="cat-edit-btn" data-edit-cat="otros">
+              <span class="cat-edit-ico" data-cat-ico="otros" style="color:var(--cat-otros);" aria-hidden="true"></span>
+              <span>Otros</span>
+            </button>
           </div>
-          <div class="field-group">
-            <label class="field-label" for="editRepeat">Repetición</label>
-            <select class="field-input" id="editRepeat">
-              <option value="none">Una sola vez</option>
-              <option value="daily">Diaria</option>
-              <option value="weekly">Semanal</option>
-              <option value="monthly">Mensual</option>
-            </select>
-          </div>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label" for="editRepeat">Repetición</label>
+          <select class="field-input" id="editRepeat">
+            <option value="none">Una sola vez</option>
+            <option value="daily">Diaria</option>
+            <option value="weekly">Semanal</option>
+            <option value="monthly">Mensual</option>
+          </select>
         </div>
 
         <button type="button" class="seg-btn" id="editPriorityBtn">Marcar como urgente (!)</button>
@@ -1289,20 +1687,53 @@
       </div>
     </div>
 
+    <!-- Monthly Calendar Sheet -->
+    <div class="sheet-backdrop hidden" id="calendarSheet" role="dialog" aria-modal="true" aria-labelledby="calendarSheetTitle">
+      <div class="sheet-panel">
+        <div class="sheet-header">
+          <h2 class="sheet-title" id="calendarSheetTitle">Calendario</h2>
+          <button type="button" class="btn-icon-sm" id="closeCalendarBtn" aria-label="Cerrar">Cerrar</button>
+        </div>
+        <div class="cal-nav-row">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <button type="button" class="pager-btn" id="calPrevMonthBtn" aria-label="Mes anterior">◀</button>
+            <span class="cal-month-title" id="calMonthTitle">Noviembre 2026</span>
+            <button type="button" class="pager-btn" id="calNextMonthBtn" aria-label="Mes siguiente">▶</button>
+          </div>
+          <button type="button" class="chip-btn" id="calTodayBtn">Hoy</button>
+        </div>
+        <div class="cal-weekdays" aria-hidden="true">
+          <span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span>
+        </div>
+        <div class="cal-grid" id="calGrid"></div>
+        <div class="cal-day-preview" id="calDayPreview"></div>
+        <div class="btn-grid-2">
+          <button type="button" class="btn-secondary" id="calAddForDateBtn">+ Añadir en esta fecha</button>
+          <button type="button" class="btn-primary" id="calSelectDayBtn">Ver este día</button>
+        </div>
+      </div>
+    </div>
+
     <script src="/vendor/d3.min.js"></script>
     <script>
       (function () {
         'use strict';
 
         const STORAGE_KEY = 'tinta_eink_state_v1';
-        const CATEGORIES = ['none', 'personal', 'trabajo', 'salud', 'recados'];
+        const CATEGORIES = ['otros', 'personal', 'trabajo', 'saturno', 'musica'];
+        const CAT_FILTER_ORDER = ['all', 'personal', 'trabajo', 'saturno', 'musica', 'otros'];
         const CAT_META = {
-          none: { label: 'Cat.', full: 'Sin categoría', color: '' },
-          personal: { label: 'Personal', full: 'Personal', color: 'var(--cat-personal)' },
-          trabajo: { label: 'Trabajo', full: 'Trabajo', color: 'var(--cat-trabajo)' },
-          salud: { label: 'Salud', full: 'Salud', color: 'var(--cat-salud)' },
-          recados: { label: 'Recados', full: 'Recados', color: 'var(--cat-recados)' }
+          all: { label: 'Todas', full: 'Todas', color: 'var(--inv-bg)', activeFg: 'var(--inv-fg)' },
+          personal: { label: 'Personal', full: 'Personal', color: 'var(--cat-personal)', activeFg: '#ffffff' },
+          trabajo: { label: 'Trabajo', full: 'Trabajo', color: 'var(--cat-trabajo)', activeFg: '#ffffff' },
+          saturno: { label: 'Saturno', full: 'Saturno', color: 'var(--cat-saturno)', activeFg: '#ffffff' },
+          musica: { label: 'Música', full: 'Música', color: 'var(--cat-musica)', activeFg: '#ffffff' },
+          otros: { label: 'Otros', full: 'Otros', color: 'var(--cat-otros)', activeFg: 'var(--inv-fg)' }
         };
+        function normalizeCategory(cat) {
+          const c = String(cat || '').toLowerCase();
+          return CATEGORIES.includes(c) ? c : 'otros';
+        }
         const REPEAT_LABEL = {
           none: '',
           daily: 'Diario',
@@ -1310,6 +1741,15 @@
           monthly: 'Mensual'
         };
         const SECTIONS = ['morning', 'afternoon', 'inbox'];
+
+        const CAT_ICONS = {
+          all: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="square" aria-hidden="true"><rect x="4" y="4" width="6.5" height="6.5" rx="1"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1"/></svg>',
+          personal: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 13C4 7.5 7.6 4 12 4s8 3.5 8 9H4z"/><path d="M9.5 13v5.5a2.5 2.5 0 0 0 5 0V13"/><circle cx="9.2" cy="9.2" r="1.1" fill="currentColor" stroke="none"/><circle cx="14.5" cy="8.5" r="1.1" fill="currentColor" stroke="none"/></svg>',
+          trabajo: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="3" y1="12.5" x2="21" y2="12.5"/></svg>',
+          saturno: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 7L5 3.5C4 2.5 2.5 3.5 2.8 5L4.5 13c.2 3.8 3.4 7 7.5 7s7.3-3.2 7.5-7L21.2 5c.3-1.5-1.2-2.5-2.2-1.5L16 7H8z"/><circle cx="9.2" cy="11.8" r="1.1" fill="currentColor" stroke="none"/><circle cx="14.8" cy="11.8" r="1.1" fill="currentColor" stroke="none"/><path d="M10.5 15h3l-1.5 1.8z" fill="currentColor" stroke="none"/></svg>',
+          musica: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/></svg>',
+          otros: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 12A1 1 0 0 1 14 12A2 2 0 0 1 10 12A3.25 3.25 0 0 1 16.5 12A4.5 4.5 0 0 1 7.5 12A6 6 0 0 1 19.5 12A7.5 7.5 0 0 1 4.5 12A8 8 0 0 1 12.5 4"/></svg>'
+        };
 
         const ICONS = {
           morning: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--morning)" stroke-width="2.75" stroke-linecap="square" aria-hidden="true"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.9" y1="4.9" x2="7.1" y2="7.1"/><line x1="16.9" y1="16.9" x2="19.1" y2="19.1"/><line x1="4.9" y1="19.1" x2="7.1" y2="16.9"/><line x1="16.9" y1="7.1" x2="19.1" y2="4.9"/></svg>',
@@ -1372,7 +1812,7 @@
               const parsed = JSON.parse(raw);
               if (parsed && Array.isArray(parsed.tasks)) {
                 return {
-                  tasks: parsed.tasks,
+                  tasks: parsed.tasks.map((t) => ({ ...t, category: normalizeCategory(t.category) })),
                   completionLog: pruneLog(parsed.completionLog),
                   dark: Boolean(parsed.dark),
                   showDone: Boolean(parsed.showDone),
@@ -1400,11 +1840,11 @@
               },
               {
                 id: uid(),
-                title: 'Paseo o estiramientos 20 min',
+                title: 'Ensayar pieza nueva 25 min',
                 section: 'afternoon',
                 dueDate: todayISO(),
                 dueTime: '18:30',
-                category: 'salud',
+                category: 'musica',
                 priority: false,
                 repeat: 'daily',
                 done: false,
@@ -1413,11 +1853,11 @@
               },
               {
                 id: uid(),
-                title: 'Toca aquí para editar o exportar .ics',
+                title: 'Planificar tareas de Saturno',
                 section: 'inbox',
                 dueDate: '',
                 dueTime: '',
-                category: 'personal',
+                category: 'saturno',
                 priority: false,
                 repeat: 'none',
                 done: false,
@@ -1433,14 +1873,20 @@
         }
 
         let state = loadState();
+        let selectedDate = todayISO();
+        let selectedCategory = 'all';
+        let quickDateOverride = null; // null => sigue selectedDate; '' => sin fecha; 'YYYY-MM-DD' => fecha fija
+        let calendarMonthCursor = todayISO().slice(0, 7);
         let quickTarget = 'inbox';
         let manualTargetSelected = false;
-        let quickCatIndex = 0;
+        let quickCatIndex = 0; // 0 => 'otros'
+        let manualCatSelected = false;
         let quickHour = '';
         let quickMinute = '';
         let pages = { morning: 0, afternoon: 0, inbox: 0 };
         let editingTaskId = null;
         let editDraftSection = 'inbox';
+        let editDraftCategory = 'otros';
         let editDraftPriority = false;
         let undoRecord = null;
         let undoTimer = null;
@@ -1552,13 +1998,13 @@
           if (!TintaNative || typeof TintaNative.syncWidgetState !== 'function') return;
           try {
             const activeTasks = sortTasks(state.tasks.filter((t) => !t.done));
-            const compact = activeTasks.slice(0, 20).map((t) => ({
+            const compact = activeTasks.slice(0, 60).map((t) => ({
               id: t.id,
               title: t.title,
               section: t.section,
               dueDate: t.dueDate || '',
               dueTime: t.dueTime || '',
-              category: t.category || 'none',
+              category: normalizeCategory(t.category),
               priority: Boolean(t.priority)
             }));
             TintaNative.syncWidgetState({
@@ -1582,7 +2028,7 @@
           if (!Array.isArray(state.completionLog)) state.completionLog = [];
           state.completionLog.push({
             id: task.id,
-            category: CATEGORIES.includes(task.category) ? task.category : 'none',
+            category: normalizeCategory(task.category),
             completedAt: now
           });
           state.completionLog = pruneLog(state.completionLog);
@@ -1600,7 +2046,7 @@
               section: task.section,
               dueDate: nextDate,
               dueTime: task.dueTime || '',
-              category: task.category || 'none',
+              category: normalizeCategory(task.category),
               priority: Boolean(task.priority),
               repeat: task.repeat,
               done: false,
@@ -1675,13 +2121,51 @@
           }
         }
 
-        function isOverdue(task) {
-          if (task.done || !task.dueTime) return false;
+        function isTaskPastDue(task) {
+          if (task.done) return false;
           const today = todayISO();
-          const date = task.dueDate || today;
-          if (date < today) return true;
-          if (date === today && task.dueTime < nowHHMM()) return true;
+          const nowHM = nowHHMM();
+          const date = task.dueDate || '';
+          if (date && date < today) return true;
+          if ((date === today || !date) && task.dueTime && task.dueTime < nowHM && task.snoozedDate !== today) {
+            return true;
+          }
+          if (date === today && !task.dueTime && task.section === 'morning' && nowHM >= '14:00' && task.snoozedDate !== today) {
+            return true;
+          }
           return false;
+        }
+
+        function isOverdue(task) {
+          if (task.done) return false;
+          const today = todayISO();
+          const date = task.dueDate || '';
+          if (date && date < today) return true;
+          if (!task.dueTime) return false;
+          const effectiveDate = date || today;
+          if (effectiveDate === today && task.dueTime < nowHHMM()) return true;
+          return false;
+        }
+
+        function getTaskDisplayBucket(task, viewDate) {
+          const today = todayISO();
+          if (viewDate === today) {
+            if (isTaskPastDue(task)) return 'inbox';
+            if (task.dueDate && task.dueDate > today) return null;
+            if (task.section === 'morning') return 'morning';
+            if (task.section === 'afternoon') return 'afternoon';
+            if (task.dueTime && task.section !== 'inbox') {
+              return task.dueTime < '14:00' ? 'morning' : 'afternoon';
+            }
+            return 'inbox';
+          }
+
+          if (task.dueDate !== viewDate) return null;
+          if (task.section === 'inbox' && !task.dueTime) return 'inbox';
+          if (task.dueTime && task.section !== 'inbox') {
+            return task.dueTime < '14:00' ? 'morning' : 'afternoon';
+          }
+          return task.section || 'inbox';
         }
 
         function sortTasks(list) {
@@ -1704,11 +2188,145 @@
           return Math.max(1, Math.floor((h - 4) / 54));
         }
 
-        function formatHeaderDate() {
-          const d = new Date();
+        function formatHeaderDate(isoDate) {
+          const d = isoDate ? new Date(isoDate + 'T12:00:00') : new Date();
           const days = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
           const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
           return `${days[d.getDay()]} ${d.getDate()} ${months[d.getMonth()]}`;
+        }
+
+        function formatShortDate(isoDate) {
+          if (!isoDate) return 'Sin fecha';
+          if (isoDate === todayISO()) return 'Hoy';
+          if (isoDate === addDaysISO(todayISO(), 1)) return 'Mañ.';
+          return `${isoDate.slice(8, 10)}/${isoDate.slice(5, 7)}`;
+        }
+
+        function getWeekDates(anchorISO) {
+          const base = new Date((anchorISO || todayISO()) + 'T12:00:00');
+          const day = base.getDay(); // 0=Dom..6=Sáb
+          const diffToMon = (day + 6) % 7;
+          const monday = new Date(base);
+          monday.setDate(base.getDate() - diffToMon);
+          const labels = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+          const out = [];
+          for (let i = 0; i < 7; i++) {
+            const cur = new Date(monday);
+            cur.setDate(monday.getDate() + i);
+            const y = cur.getFullYear();
+            const m = String(cur.getMonth() + 1).padStart(2, '0');
+            const dd = String(cur.getDate()).padStart(2, '0');
+            out.push({
+              letter: labels[i],
+              dayNum: cur.getDate(),
+              iso: `${y}-${m}-${dd}`
+            });
+          }
+          return out;
+        }
+
+        function matchesSelectedCategory(task) {
+          if (selectedCategory === 'all') return true;
+          return normalizeCategory(task.category) === selectedCategory;
+        }
+
+        function renderWeekStrip() {
+          const strip = document.getElementById('weekStrip');
+          if (!strip) return;
+          const today = todayISO();
+          const weekDays = getWeekDates(selectedDate);
+          const datesWithTasks = new Set(
+            state.tasks.filter((t) => !t.done && t.dueDate && matchesSelectedCategory(t)).map((t) => t.dueDate)
+          );
+
+          const dayButtonsHtml = weekDays.map((item) => {
+            const isSelected = item.iso === selectedDate;
+            const isToday = item.iso === today;
+            const hasTasks = datesWithTasks.has(item.iso);
+            return `
+              <button
+                type="button"
+                class="week-day-btn ${isSelected ? 'active' : ''} ${isToday ? 'is-today' : ''}"
+                data-week-date="${item.iso}"
+                aria-label="${formatHeaderDate(item.iso)}"
+              >
+                ${hasTasks ? '<span class="week-day-dot" aria-hidden="true"></span>' : ''}
+                <span class="week-day-letter">${item.letter}</span>
+              </button>
+            `;
+          }).join('');
+
+          const isDifferentMonth = selectedDate.slice(0, 7) !== today.slice(0, 7);
+          const calBtnHtml = `
+            <button type="button" class="week-cal-btn ${isDifferentMonth ? 'has-future' : ''}" id="openCalendarBtn" aria-label="Abrir calendario mensual" title="Calendario mensual">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="square" aria-hidden="true">
+                <rect x="3" y="4" width="18" height="17" rx="2"/>
+                <line x1="8" y1="2" x2="8" y2="6"/>
+                <line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="3" y1="9.5" x2="21" y2="9.5"/>
+                <circle cx="12" cy="15" r="2" fill="currentColor" stroke="none"/>
+              </svg>
+            </button>
+          `;
+
+          strip.innerHTML = dayButtonsHtml + calBtnHtml;
+        }
+
+        function renderCatStrip() {
+          const strip = document.getElementById('catStrip');
+          if (!strip) return;
+          const counts = { all: 0, personal: 0, trabajo: 0, saturno: 0, musica: 0, otros: 0 };
+          state.tasks.forEach((t) => {
+            if (t.done) return;
+            if (getTaskDisplayBucket(t, selectedDate) === null) return;
+            const cat = normalizeCategory(t.category);
+            counts[cat] += 1;
+            counts.all += 1;
+          });
+
+          strip.innerHTML = CAT_FILTER_ORDER.map((catKey) => {
+            const meta = CAT_META[catKey];
+            const isActive = selectedCategory === catKey;
+            const countVal = counts[catKey] || 0;
+            const styleAttr = isActive
+              ? `style="--cat-active-bg:${meta.color};--cat-active-fg:${meta.activeFg};"`
+              : '';
+            const iconColor = isActive ? meta.activeFg : meta.color;
+            return `
+              <button
+                type="button"
+                class="cat-tab-btn ${isActive ? 'active' : ''}"
+                data-cat-filter="${catKey}"
+                ${styleAttr}
+                aria-pressed="${isActive ? 'true' : 'false'}"
+              >
+                <span class="cat-tab-left">
+                  <span class="cat-tab-swatch" style="color:${iconColor};" aria-hidden="true">${CAT_ICONS[catKey] || ''}</span>
+                  <span class="cat-tab-label">${meta.label}</span>
+                </span>
+                <span class="cat-tab-count tabular">${countVal}</span>
+              </button>
+            `;
+          }).join('');
+        }
+
+        function renderCategoryBanner() {
+          const banner = document.getElementById('activeCategoryBanner');
+          if (!banner) return;
+          const meta = CAT_META[selectedCategory] || CAT_META.all;
+          const titleText = selectedCategory === 'all' ? 'Todas las categorías' : meta.full;
+          const activeCount = state.tasks.filter(
+            (t) => !t.done && matchesSelectedCategory(t) && getTaskDisplayBucket(t, selectedDate) !== null
+          ).length;
+          const countLabel = `${activeCount} ${activeCount === 1 ? 'recordatorio' : 'recordatorios'}`;
+          banner.style.borderLeftColor = meta.color;
+          banner.innerHTML = `
+            <span class="cat-banner-left">
+              <span class="cat-banner-icon" style="color:${meta.color};">${CAT_ICONS[selectedCategory] || CAT_ICONS.all}</span>
+              <span class="cat-banner-title">${escapeText(titleText)}</span>
+            </span>
+            <span class="cat-banner-sub">${escapeText(formatHeaderDate(selectedDate))} · ${countLabel}</span>
+          `;
         }
 
         function escapeText(str) {
@@ -1718,10 +2336,15 @@
         }
 
         function renderTopMeta() {
-          const active = state.tasks.filter((t) => !t.done).length;
-          const overdue = state.tasks.filter((t) => isOverdue(t)).length;
-          let text = `${formatHeaderDate()} · ${active} ${active === 1 ? 'activo' : 'activos'}`;
-          if (overdue > 0) {
+          const today = todayISO();
+          const activeOnView = state.tasks.filter(
+            (t) => !t.done && matchesSelectedCategory(t) && getTaskDisplayBucket(t, selectedDate) !== null
+          ).length;
+          const overdue = state.tasks.filter((t) => matchesSelectedCategory(t) && isOverdue(t)).length;
+          const prefix = selectedDate === today ? `Hoy · ${formatHeaderDate(today)}` : formatHeaderDate(selectedDate);
+          const catSuffix = selectedCategory !== 'all' ? ` · ${CAT_META[selectedCategory].full}` : '';
+          let text = `${prefix}${catSuffix} · ${activeOnView} ${activeOnView === 1 ? 'activo' : 'activos'}`;
+          if (selectedDate === today && overdue > 0) {
             text += ` · ${overdue} venc.`;
           }
           document.getElementById('topMeta').textContent = text;
@@ -1742,9 +2365,9 @@
           hintEl.textContent = state.focusedSection === section ? '· Volver' : '';
 
           const rawTasks = state.tasks.filter((t) => {
-            if (t.section !== section) return false;
             if (!state.showDone && t.done) return false;
-            return true;
+            if (!matchesSelectedCategory(t)) return false;
+            return getTaskDisplayBucket(t, selectedDate) === section;
           });
           const tasks = sortTasks(rawTasks);
           const activeCount = rawTasks.filter((t) => !t.done).length;
@@ -1767,11 +2390,12 @@
           }
 
           if (tasks.length === 0) {
+            const catNote = selectedCategory !== 'all' ? ` en ${CAT_META[selectedCategory].full}` : '';
             const emptyMsg = section === 'morning'
-              ? 'Nada para la mañana'
+              ? `Nada para la mañana${catNote}`
               : section === 'afternoon'
-                ? 'Tarde despejada'
-                : 'Bandeja vacía';
+                ? `Tarde despejada${catNote}`
+                : `Sin pendientes${catNote}`;
             listEl.innerHTML = `<div class="empty-state">${emptyMsg}</div>`;
             return;
           }
@@ -1786,15 +2410,16 @@
           };
 
           listEl.innerHTML = visible.map((t) => {
-            const cat = CAT_META[t.category] || CAT_META.none;
+            const normCat = normalizeCategory(t.category);
+            const cat = CAT_META[normCat] || CAT_META.otros;
             const overdue = isOverdue(t);
             const metaParts = [];
             if (overdue) metaParts.push('<span class="overdue-flag">! VENCIDO</span>');
             if (t.dueTime) metaParts.push(escapeText(t.dueTime));
-            if (t.dueDate && t.dueDate !== todayISO()) {
+            if (t.dueDate && t.dueDate !== selectedDate) {
               metaParts.push(escapeText(t.dueDate.slice(5).split('-').reverse().join('/')));
             }
-            if (t.category && t.category !== 'none') metaParts.push(escapeText(cat.full));
+            metaParts.push(escapeText(cat.full));
             if (t.repeat && t.repeat !== 'none') metaParts.push(escapeText(REPEAT_LABEL[t.repeat]));
 
             const catBar = cat.color
@@ -1826,6 +2451,15 @@
           }).join('');
         }
 
+        function syncQuickDateUI() {
+          const effDate = quickDateOverride !== null ? quickDateOverride : selectedDate;
+          const label = effDate ? formatShortDate(effDate) : 'Sin fecha';
+          document.getElementById('quickDateLabel').textContent = label;
+          document.getElementById('quickDateReadout').textContent = `Fecha: ${effDate || 'Sin fecha'}`;
+          document.getElementById('quickDateInput').value = effDate || '';
+          document.getElementById('quickDateToggle').classList.toggle('active', Boolean(effDate && effDate !== todayISO()));
+        }
+
         function renderAll() {
           applyTheme();
           const grid = document.getElementById('sectionsGrid');
@@ -1835,6 +2469,10 @@
             grid.classList.remove('focused');
           }
           renderTopMeta();
+          renderWeekStrip();
+          renderCatStrip();
+          renderCategoryBanner();
+          syncQuickDateUI();
           SECTIONS.forEach(renderSection);
 
           const toggleDoneBtn = document.getElementById('toggleDoneViewBtn');
@@ -1871,7 +2509,7 @@
           if (nextDone) {
             state.completionLog.push({
               id: task.id,
-              category: CATEGORIES.includes(task.category) ? task.category : 'none',
+              category: normalizeCategory(task.category),
               completedAt: now
             });
             state.completionLog = pruneLog(state.completionLog);
@@ -1892,7 +2530,7 @@
               section: task.section,
               dueDate: nextDate,
               dueTime: task.dueTime || '',
-              category: task.category || 'none',
+              category: normalizeCategory(task.category),
               priority: Boolean(task.priority),
               repeat: task.repeat,
               done: false,
@@ -1912,8 +2550,21 @@
           const task = state.tasks.find((t) => t.id === id);
           if (!task || !SECTIONS.includes(destSection)) return;
           task.section = destSection;
-          if ((destSection === 'morning' || destSection === 'afternoon') && !task.dueDate) {
-            task.dueDate = todayISO();
+          const today = todayISO();
+          if (destSection === 'morning' || destSection === 'afternoon') {
+            if (!task.dueDate || task.dueDate < today) {
+              task.dueDate = selectedDate >= today ? selectedDate : today;
+            }
+            if (task.dueTime && task.dueDate === today && task.dueTime < nowHHMM()) {
+              task.dueTime = '';
+            }
+            if (destSection === 'morning' && task.dueDate === today && nowHHMM() >= '14:00') {
+              task.snoozedDate = today;
+            } else {
+              delete task.snoozedDate;
+            }
+          } else {
+            delete task.snoozedDate;
           }
           saveState();
           renderAll();
@@ -1925,9 +2576,10 @@
           let detectedCat = null;
           let detectedSection = null;
           let detectedTime = '';
+          let detectedDate = '';
 
           if (!text) {
-            return { cleanTitle: '', priority, detectedCat, detectedSection, detectedTime };
+            return { cleanTitle: '', priority, detectedCat, detectedSection, detectedTime, detectedDate };
           }
 
           // 1. Urgency via leading/trailing "!" or spoken leading "urgente"
@@ -1950,21 +2602,55 @@
           // Normalize spoken "a. m." / "p. m." into "am" / "pm"
           text = text.replace(/\ba\.\s*m\.?(?=\s|$|[.,])/gi, 'am').replace(/\bp\.\s*m\.?(?=\s|$|[.,])/gi, 'pm');
 
-          // 2. Category prefix (t:, p:, s:, r:)
-          const prefixMap = { t: 'trabajo', p: 'personal', s: 'salud', r: 'recados' };
-          const prefixMatch = text.match(/^([tpsr]):\s*(.+)$/i);
+          // 2. Category prefix (p:, t:, s:, m:, o:)
+          const prefixMap = { p: 'personal', t: 'trabajo', s: 'saturno', m: 'musica', o: 'otros' };
+          const wordToCat = (w) => {
+            const k = (w || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            if (prefixMap[k]) return prefixMap[k];
+            if (CATEGORIES.includes(k)) return k;
+            return null;
+          };
+
+          const prefixMatch = text.match(/^([ptsmo]):\s*(.+)$/i);
           if (prefixMatch) {
-            detectedCat = prefixMap[prefixMatch[1].toLowerCase()] || null;
+            detectedCat = wordToCat(prefixMatch[1]);
             text = prefixMatch[2].trim();
           }
 
-          // 3. Category tags (@trabajo, #salud, @t, #s, etc.)
-          const catTagRegex = /(?:^|\s)[@#](trabajo|personal|salud|recados|t|p|s|r)(?=\s|$)/gi;
+          // 3. Category tags (@personal, #trabajo, @saturno, #música, @otros, @p, #t, #s, #m, #o)
+          const catTagRegex = /(?:^|\s)[@#](personal|trabajo|saturno|m[uú]sica|musica|otros|p|t|s|m|o)(?=\s|$|[.,])/gi;
           text = text.replace(catTagRegex, (_, code) => {
-            const c = code.toLowerCase();
-            detectedCat = prefixMap[c] || c;
+            const found = wordToCat(code);
+            if (found) detectedCat = found;
             return ' ';
           }).trim();
+
+          // 3b. Spoken/written explicit category phrase ("categoría saturno...", "apartado música...")
+          if (!detectedCat) {
+            const explicitCatRegex = /(?:^|\s)(?:categor[ií]a|apartado)\s+(personal|trabajo|saturno|m[uú]sica|musica|otros)(?=\s|$|[.,:;])/gi;
+            text = text.replace(explicitCatRegex, (_, catWord) => {
+              const found = wordToCat(catWord);
+              if (found) detectedCat = found;
+              return ' ';
+            }).trim();
+          }
+
+          // 3c. Leading category word from voice/text (e.g. "Saturno revisar métricas", "Música: ensayar")
+          if (!detectedCat) {
+            const leadCatMatch = text.match(/^(personal|trabajo|saturno|m[uú]sica|musica|otros)(?:\s*[:,\-–]\s*|\s+(?!de\b|en\b|con\b|para\b|sobre\b|y\b))(.+)$/i);
+            if (leadCatMatch && leadCatMatch[2].trim().length >= 2) {
+              detectedCat = wordToCat(leadCatMatch[1]);
+              text = leadCatMatch[2].trim();
+            }
+          }
+
+          // 3d. Category keyword mentioned naturally inside sentence ("reunión de trabajo", "ensayar música")
+          if (!detectedCat) {
+            const inTextMatch = text.match(/\b(personal|trabajo|saturno|m[uú]sica|musica|otros)\b/i);
+            if (inTextMatch) {
+              detectedCat = wordToCat(inTextMatch[1]);
+            }
+          }
 
           // 4. Section tags (@mañana, #tarde, @pendientes, "por la mañana", "por la tarde")
           const secTagRegex = /(?:^|\s)[@#](mañana|manana|tarde|pendientes|inbox)(?=\s|$)/gi;
@@ -1983,6 +2669,41 @@
             } else if (/(?:^|\s)(?:por|en)\s+la\s+tarde(?=\s|$)/i.test(text)) {
               detectedSection = 'afternoon';
               text = text.replace(/(?:^|\s)(?:por|en)\s+la\s+tarde(?=\s|$)/gi, ' ').trim();
+            }
+          }
+
+          // 4b. Date detection ("pasado mañana", "para mañana", "hoy", "el lunes..domingo", "DD/MM")
+          if (/(?:^|\s)(?:para\s+)?pasado\s+mañana(?=\s|$|[.,])/i.test(text)) {
+            detectedDate = addDaysISO(todayISO(), 2);
+            text = text.replace(/(?:^|\s)(?:para\s+)?pasado\s+mañana(?=\s|$|[.,])/gi, ' ').trim();
+          } else if (/(?:^|\s)(?:para\s+|el\s+día\s+de\s+)mañana(?=\s|$|[.,])/i.test(text)) {
+            detectedDate = addDaysISO(todayISO(), 1);
+            text = text.replace(/(?:^|\s)(?:para\s+|el\s+día\s+de\s+)mañana(?=\s|$|[.,])/gi, ' ').trim();
+          } else if (/(?:^|\s)(?:para\s+)?hoy(?=\s|$|[.,])/i.test(text)) {
+            detectedDate = todayISO();
+            text = text.replace(/(?:^|\s)(?:para\s+)?hoy(?=\s|$|[.,])/gi, ' ').trim();
+          } else {
+            const wdMatch = text.match(/(?:^|\s)(?:para\s+el|el|para)\s+(lunes|martes|miércoles|miercoles|jueves|viernes|sábado|sabado|domingo)(?=\s|$|[.,])/i);
+            if (wdMatch) {
+              const wdMap = { domingo: 0, lunes: 1, martes: 2, miércoles: 3, miercoles: 3, jueves: 4, viernes: 5, sábado: 6, sabado: 6 };
+              const targetDow = wdMap[wdMatch[1].toLowerCase()];
+              const nowD = new Date();
+              let diff = (targetDow - nowD.getDay() + 7) % 7;
+              if (diff === 0) diff = 7;
+              detectedDate = addDaysISO(todayISO(), diff);
+              text = text.replace(wdMatch[0], ' ').trim();
+            } else {
+              const dmMatch = text.match(/(?:^|\s)(?:el\s+)?(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?(?=\s|$|[.,])/);
+              if (dmMatch) {
+                const dayNum = parseInt(dmMatch[1], 10);
+                const monNum = parseInt(dmMatch[2], 10);
+                let yearNum = dmMatch[3] ? parseInt(dmMatch[3], 10) : new Date().getFullYear();
+                if (yearNum < 100) yearNum += 2000;
+                if (monNum >= 1 && monNum <= 12 && dayNum >= 1 && dayNum <= 31) {
+                  detectedDate = `${yearNum}-${pad2(monNum)}-${pad2(dayNum)}`;
+                  text = text.replace(dmMatch[0], ' ').trim();
+                }
+              }
             }
           }
 
@@ -2019,13 +2740,17 @@
             }
           }
 
-          const cleanTitle = text.replace(/\s{2,}/g, ' ').trim();
+          let cleanTitle = text.replace(/\s{2,}/g, ' ').trim();
+          if (cleanTitle) {
+            cleanTitle = cleanTitle.charAt(0).toUpperCase() + cleanTitle.slice(1);
+          }
           return {
             cleanTitle: cleanTitle || rawText.trim(),
             priority,
             detectedCat,
             detectedSection,
-            detectedTime
+            detectedTime,
+            detectedDate
           };
         }
 
@@ -2034,7 +2759,7 @@
           const manualTime = document.getElementById('quickTimeInput').value || '';
           const finalTime = manualTime || parsed.detectedTime || '';
 
-          const manualCat = CATEGORIES[quickCatIndex] || 'none';
+          const manualCat = manualCatSelected ? normalizeCategory(CATEGORIES[quickCatIndex]) : 'otros';
           const finalCat = parsed.detectedCat || manualCat;
 
           let finalSection = quickTarget;
@@ -2047,11 +2772,19 @@
             }
           }
 
+          let finalDate = quickDateOverride !== null ? quickDateOverride : selectedDate;
+          if (parsed.detectedDate) {
+            finalDate = parsed.detectedDate;
+          } else if (!finalDate && (finalSection !== 'inbox' || finalTime)) {
+            finalDate = selectedDate || todayISO();
+          }
+
           return {
             title: parsed.cleanTitle,
             priority: parsed.priority,
             category: finalCat,
             section: finalSection,
+            dueDate: finalDate,
             dueTime: finalTime,
             parsed
           };
@@ -2069,6 +2802,9 @@
           const tags = [];
           if (parsed.priority) {
             tags.push('<span class="smart-tag smart-urgent">! Urgente</span>');
+          }
+          if (parsed.detectedDate) {
+            tags.push(`<span class="smart-tag tabular">${escapeText(formatShortDate(parsed.detectedDate))}</span>`);
           }
           if (parsed.detectedTime && !document.getElementById('quickTimeInput').value) {
             tags.push(`<span class="smart-tag tabular">${escapeText(parsed.detectedTime)}</span>`);
@@ -2105,7 +2841,7 @@
             id: uid(),
             title: draft.title,
             section: draft.section,
-            dueDate: (draft.section !== 'inbox' || draft.dueTime) ? todayISO() : '',
+            dueDate: draft.dueDate,
             dueTime: draft.dueTime,
             category: draft.category,
             priority: draft.priority,
@@ -2115,14 +2851,26 @@
             createdAt: Date.now()
           };
           state.tasks.unshift(newTask);
-          pages[draft.section] = 0;
+          if (draft.dueDate) {
+            selectedDate = draft.dueDate;
+          }
+          if (selectedCategory !== 'all' && selectedCategory !== newTask.category) {
+            selectedCategory = newTask.category;
+          }
+          const targetBucket = getTaskDisplayBucket(newTask, selectedDate) || draft.section;
+          pages[targetBucket] = 0;
           input.value = '';
           quickHour = '';
           quickMinute = '';
+          quickDateOverride = null;
           manualTargetSelected = false;
+          quickCatIndex = 0;
+          manualCatSelected = false;
+          syncQuickCatUI();
           document.getElementById('quickTimeInput').value = '';
           document.getElementById('quickTimeInput').classList.add('hidden');
           document.getElementById('quickTimeWrap').classList.add('hidden');
+          document.getElementById('quickDateWrap').classList.add('hidden');
           document.getElementById('quickTimeLabel').textContent = 'Hora';
           document.getElementById('quickTimeToggle').classList.remove('active');
           syncQuickTimePickerUI();
@@ -2136,14 +2884,15 @@
           if (!task) return;
           editingTaskId = id;
           editDraftSection = task.section;
+          editDraftCategory = normalizeCategory(task.category);
           editDraftPriority = Boolean(task.priority);
 
           document.getElementById('editTitle').value = task.title;
           document.getElementById('editDate').value = task.dueDate || '';
           document.getElementById('editTime').value = task.dueTime || '';
-          document.getElementById('editCategory').value = task.category || 'none';
           document.getElementById('editRepeat').value = task.repeat || 'none';
           syncEditSectionButtons();
+          syncEditCategoryButtons();
           syncEditPriorityButton();
           syncEditTimePickerUI();
           document.getElementById('editSheet').classList.remove('hidden');
@@ -2152,6 +2901,26 @@
         function syncEditSectionButtons() {
           document.querySelectorAll('[data-edit-section]').forEach((btn) => {
             btn.classList.toggle('active', btn.getAttribute('data-edit-section') === editDraftSection);
+          });
+        }
+
+        function syncEditCategoryButtons() {
+          document.querySelectorAll('[data-edit-cat]').forEach((btn) => {
+            const key = btn.getAttribute('data-edit-cat');
+            const isActive = key === editDraftCategory;
+            const meta = CAT_META[key] || CAT_META.otros;
+            const icoSpan = btn.querySelector('[data-cat-ico]');
+            if (icoSpan && !icoSpan.innerHTML) {
+              icoSpan.innerHTML = CAT_ICONS[key] || '';
+            }
+            btn.classList.toggle('active', isActive);
+            if (isActive) {
+              btn.style.setProperty('--cat-active-bg', meta.color);
+              btn.style.setProperty('--cat-active-fg', meta.activeFg);
+            } else {
+              btn.style.removeProperty('--cat-active-bg');
+              btn.style.removeProperty('--cat-active-fg');
+            }
           });
         }
 
@@ -2173,13 +2942,22 @@
           const title = document.getElementById('editTitle').value.trim();
           if (!title) return;
 
+          const nextDate = document.getElementById('editDate').value || '';
+          const nextTime = document.getElementById('editTime').value || '';
+          const timeChanged = nextTime !== (task.dueTime || '');
+          let nextSection = editDraftSection;
+          if (timeChanged && nextTime && nextSection !== 'inbox') {
+            nextSection = nextTime < '14:00' ? 'morning' : 'afternoon';
+          }
+
           task.title = title;
-          task.section = editDraftSection;
-          task.dueDate = document.getElementById('editDate').value || '';
-          task.dueTime = document.getElementById('editTime').value || '';
-          task.category = document.getElementById('editCategory').value || 'none';
+          task.section = nextSection;
+          task.dueDate = nextDate;
+          task.dueTime = nextTime;
+          task.category = normalizeCategory(editDraftCategory);
           task.repeat = document.getElementById('editRepeat').value || 'none';
           task.priority = editDraftPriority;
+          delete task.snoozedDate;
 
           saveState();
           closeEditSheet();
@@ -2295,7 +3073,7 @@
                   section: SECTIONS.includes(t.section) ? t.section : 'inbox',
                   dueDate: typeof t.dueDate === 'string' ? t.dueDate : '',
                   dueTime: typeof t.dueTime === 'string' ? t.dueTime : '',
-                  category: CATEGORIES.includes(t.category) ? t.category : 'none',
+                  category: normalizeCategory(t.category),
                   priority: Boolean(t.priority),
                   repeat: ['none', 'daily', 'weekly', 'monthly'].includes(t.repeat) ? t.repeat : 'none',
                   done: Boolean(t.done),
@@ -2320,11 +3098,11 @@
           const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
           const seen = new Set();
           const counts = {
-            trabajo: 0,
             personal: 0,
-            salud: 0,
-            recados: 0,
-            none: 0
+            trabajo: 0,
+            saturno: 0,
+            musica: 0,
+            otros: 0
           };
 
           const addEntry = (id, category, completedAt) => {
@@ -2332,7 +3110,7 @@
             const dedupeKey = `${id || ''}_${completedAt}`;
             if (seen.has(dedupeKey)) return;
             seen.add(dedupeKey);
-            const cat = CATEGORIES.includes(category) ? category : 'none';
+            const cat = normalizeCategory(category);
             counts[cat] += 1;
           };
 
@@ -2346,11 +3124,11 @@
           const cs = getComputedStyle(document.documentElement);
           const fgColor = cs.getPropertyValue('--fg').trim() || '#000000';
           return [
-            { key: 'trabajo', label: 'Trabajo', count: counts.trabajo, color: cs.getPropertyValue('--cat-trabajo').trim() || '#cc0000' },
             { key: 'personal', label: 'Personal', count: counts.personal, color: cs.getPropertyValue('--cat-personal').trim() || '#0044cc' },
-            { key: 'salud', label: 'Salud', count: counts.salud, color: cs.getPropertyValue('--cat-salud').trim() || '#007a33' },
-            { key: 'recados', label: 'Recados', count: counts.recados, color: cs.getPropertyValue('--cat-recados').trim() || '#d95f00' },
-            { key: 'none', label: 'Sin cat.', count: counts.none, color: fgColor }
+            { key: 'trabajo', label: 'Trabajo', count: counts.trabajo, color: cs.getPropertyValue('--cat-trabajo').trim() || '#cc0000' },
+            { key: 'saturno', label: 'Saturno', count: counts.saturno, color: cs.getPropertyValue('--cat-saturno').trim() || '#6a0dad' },
+            { key: 'musica', label: 'Música', count: counts.musica, color: cs.getPropertyValue('--cat-musica').trim() || '#007a33' },
+            { key: 'otros', label: 'Otros', count: counts.otros, color: fgColor }
           ];
         }
 
@@ -2573,20 +3351,154 @@
         buildHourButtons('editHourGrid', 'data-ehour');
 
         function syncQuickCatUI() {
-          const catKey = CATEGORIES[quickCatIndex];
+          const catKey = normalizeCategory(CATEGORIES[quickCatIndex]);
           const meta = CAT_META[catKey];
-          const dot = document.getElementById('quickCatDot');
+          const iconEl = document.getElementById('quickCatIcon');
           const label = document.getElementById('quickCatLabel');
+          const btn = document.getElementById('quickCatBtn');
           label.textContent = meta.label;
-          if (meta.color) {
-            dot.style.display = 'inline-block';
-            dot.style.background = meta.color;
+          const isColored = manualCatSelected && catKey !== 'otros';
+          btn.classList.toggle('active', isColored);
+          if (iconEl) {
+            iconEl.innerHTML = CAT_ICONS[catKey] || '';
+          }
+          if (isColored) {
+            btn.style.background = meta.color;
+            btn.style.color = meta.activeFg;
+            if (iconEl) iconEl.style.color = meta.activeFg;
           } else {
-            dot.style.display = 'none';
+            btn.style.removeProperty('background');
+            btn.style.removeProperty('color');
+            if (iconEl) iconEl.style.color = meta.color;
           }
         }
 
+        function renderMonthlyCalendar() {
+          const gridEl = document.getElementById('calGrid');
+          const titleEl = document.getElementById('calMonthTitle');
+          const previewEl = document.getElementById('calDayPreview');
+          const [yStr, mStr] = calendarMonthCursor.split('-');
+          const year = parseInt(yStr, 10);
+          const monthIdx = parseInt(mStr, 10) - 1;
+          const monthNames = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+          titleEl.textContent = `${monthNames[monthIdx]} ${year}`;
+
+          const firstOfMonth = new Date(year, monthIdx, 1);
+          const startDow = (firstOfMonth.getDay() + 6) % 7; // 0=Mon..6=Sun
+          const gridStart = new Date(year, monthIdx, 1 - startDow);
+          const today = todayISO();
+          const datesWithTasks = new Set(
+            state.tasks.filter((t) => !t.done && t.dueDate && matchesSelectedCategory(t)).map((t) => t.dueDate)
+          );
+
+          let html = '';
+          for (let i = 0; i < 42; i++) {
+            const cur = new Date(gridStart);
+            cur.setDate(gridStart.getDate() + i);
+            const iso = `${cur.getFullYear()}-${pad2(cur.getMonth() + 1)}-${pad2(cur.getDate())}`;
+            const isOther = cur.getMonth() !== monthIdx;
+            const isToday = iso === today;
+            const isSelected = iso === selectedDate;
+            const hasTask = datesWithTasks.has(iso);
+            html += `
+              <button type="button" class="cal-cell ${isOther ? 'is-other' : ''} ${isToday ? 'is-today' : ''} ${isSelected ? 'is-selected' : ''}" data-cal-iso="${iso}">
+                <span class="cal-num">${cur.getDate()}</span>
+                ${hasTask ? '<span class="cal-dot" aria-hidden="true"></span>' : ''}
+              </button>
+            `;
+          }
+          gridEl.innerHTML = html;
+
+          const dayTasks = sortTasks(state.tasks.filter((t) => !t.done && t.dueDate === selectedDate && matchesSelectedCategory(t)));
+          if (dayTasks.length === 0) {
+            previewEl.innerHTML = `<div style="font-size:13px;font-weight:700;opacity:0.75;">${formatHeaderDate(selectedDate)} · Sin recordatorios con fecha</div>`;
+          } else {
+            previewEl.innerHTML = `<div style="font-size:12px;font-weight:800;text-transform:uppercase;">${formatHeaderDate(selectedDate)} (${dayTasks.length})</div>` +
+              dayTasks.slice(0, 5).map((t) => {
+                const cat = CAT_META[normalizeCategory(t.category)] || CAT_META.otros;
+                const timeStr = t.dueTime ? `<span class="tabular" style="font-weight:800;">${escapeText(t.dueTime)}</span>` : '<span>•</span>';
+                return `<div class="cal-preview-item"><span class="cat-mark" style="background:${cat.color};"></span>${timeStr}<span>${t.priority ? '! ' : ''}${escapeText(t.title)}</span></div>`;
+              }).join('');
+          }
+        }
+
+        function openCalendarSheet() {
+          calendarMonthCursor = selectedDate.slice(0, 7);
+          renderMonthlyCalendar();
+          document.getElementById('calendarSheet').classList.remove('hidden');
+        }
+
         // Event Wiring
+        document.getElementById('weekStrip').addEventListener('click', (e) => {
+          const dayBtn = e.target.closest('[data-week-date]');
+          if (dayBtn) {
+            selectedDate = dayBtn.getAttribute('data-week-date');
+            quickDateOverride = null;
+            pages = { morning: 0, afternoon: 0, inbox: 0 };
+            renderAll();
+            return;
+          }
+          if (e.target.closest('#openCalendarBtn')) {
+            openCalendarSheet();
+          }
+        });
+
+        document.getElementById('topMeta').addEventListener('click', () => {
+          if (selectedDate !== todayISO()) {
+            selectedDate = todayISO();
+            quickDateOverride = null;
+            renderAll();
+          } else {
+            openCalendarSheet();
+          }
+        });
+
+        const calendarSheet = document.getElementById('calendarSheet');
+        document.getElementById('closeCalendarBtn').addEventListener('click', () => {
+          calendarSheet.classList.add('hidden');
+        });
+        calendarSheet.addEventListener('click', (e) => {
+          if (e.target === calendarSheet) calendarSheet.classList.add('hidden');
+        });
+        document.getElementById('calPrevMonthBtn').addEventListener('click', () => {
+          const [y, m] = calendarMonthCursor.split('-').map(Number);
+          const d = new Date(y, m - 2, 1);
+          calendarMonthCursor = `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`;
+          renderMonthlyCalendar();
+        });
+        document.getElementById('calNextMonthBtn').addEventListener('click', () => {
+          const [y, m] = calendarMonthCursor.split('-').map(Number);
+          const d = new Date(y, m, 1);
+          calendarMonthCursor = `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`;
+          renderMonthlyCalendar();
+        });
+        document.getElementById('calTodayBtn').addEventListener('click', () => {
+          selectedDate = todayISO();
+          quickDateOverride = null;
+          calendarMonthCursor = selectedDate.slice(0, 7);
+          renderMonthlyCalendar();
+          renderAll();
+        });
+        document.getElementById('calGrid').addEventListener('click', (e) => {
+          const cell = e.target.closest('[data-cal-iso]');
+          if (!cell) return;
+          selectedDate = cell.getAttribute('data-cal-iso');
+          quickDateOverride = null;
+          calendarMonthCursor = selectedDate.slice(0, 7);
+          renderMonthlyCalendar();
+          renderAll();
+        });
+        document.getElementById('calSelectDayBtn').addEventListener('click', () => {
+          calendarSheet.classList.add('hidden');
+          renderAll();
+        });
+        document.getElementById('calAddForDateBtn').addEventListener('click', () => {
+          calendarSheet.classList.add('hidden');
+          quickDateOverride = selectedDate;
+          renderAll();
+          document.getElementById('quickInput').focus();
+        });
+
         document.getElementById('sectionsGrid').addEventListener('click', (e) => {
           const pagerBtn = e.target.closest('[data-page-dir]');
           if (pagerBtn) {
@@ -2622,9 +3534,47 @@
           });
         });
 
+        document.getElementById('quickDateToggle').addEventListener('click', () => {
+          document.getElementById('quickDateWrap').classList.toggle('hidden');
+        });
+        document.getElementById('quickDateWrap').addEventListener('click', (e) => {
+          const preset = e.target.closest('[data-qdate]');
+          if (!preset) return;
+          const kind = preset.getAttribute('data-qdate');
+          if (kind === 'today') quickDateOverride = todayISO();
+          if (kind === 'tomorrow') quickDateOverride = addDaysISO(todayISO(), 1);
+          if (kind === 'week') quickDateOverride = addDaysISO(todayISO(), 7);
+          syncQuickDateUI();
+          document.getElementById('quickDateWrap').classList.add('hidden');
+        });
+        document.getElementById('quickDateCalBtn').addEventListener('click', () => {
+          document.getElementById('quickDateWrap').classList.add('hidden');
+          openCalendarSheet();
+        });
+        document.getElementById('quickDateInput').addEventListener('change', (e) => {
+          quickDateOverride = e.target.value || '';
+          syncQuickDateUI();
+        });
+        document.getElementById('clearQuickDateBtn').addEventListener('click', () => {
+          quickDateOverride = '';
+          document.getElementById('quickDateWrap').classList.add('hidden');
+          syncQuickDateUI();
+        });
+
         document.getElementById('quickCatBtn').addEventListener('click', () => {
           quickCatIndex = (quickCatIndex + 1) % CATEGORIES.length;
+          manualCatSelected = true;
           syncQuickCatUI();
+        });
+
+        document.getElementById('catStrip').addEventListener('click', (e) => {
+          const btn = e.target.closest('[data-cat-filter]');
+          if (!btn) return;
+          const nextCat = btn.getAttribute('data-cat-filter');
+          if (!nextCat || !CAT_META[nextCat]) return;
+          selectedCategory = nextCat;
+          pages = { morning: 0, afternoon: 0, inbox: 0 };
+          renderAll();
         });
 
         document.getElementById('quickTimeToggle').addEventListener('click', () => {
@@ -2713,6 +3663,12 @@
             editDraftSection = btn.getAttribute('data-edit-section');
             syncEditSectionButtons();
           });
+        });
+        document.getElementById('editCatGrid').addEventListener('click', (e) => {
+          const btn = e.target.closest('[data-edit-cat]');
+          if (!btn) return;
+          editDraftCategory = normalizeCategory(btn.getAttribute('data-edit-cat'));
+          syncEditCategoryButtons();
         });
         document.getElementById('editPriorityBtn').addEventListener('click', () => {
           editDraftPriority = !editDraftPriority;
@@ -3094,8 +4050,19 @@
           renderAll();
         });
 
+        let lastTickMinute = nowHHMM();
+        let lastTickDate = todayISO();
         setInterval(() => {
-          renderTopMeta();
+          const curHM = nowHHMM();
+          const curDate = todayISO();
+          if (curHM !== lastTickMinute || curDate !== lastTickDate) {
+            lastTickMinute = curHM;
+            lastTickDate = curDate;
+            renderAll();
+            syncWidgetToNative();
+          } else {
+            renderTopMeta();
+          }
           if (!getNativeLocalNotifications()) {
             checkForegroundNotifications();
           }

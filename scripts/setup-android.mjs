@@ -67,6 +67,20 @@ if (!manifest.includes('TintaCaptureWidgetProvider')) {
                 android:name="android.appwidget.provider"
                 android:resource="@xml/tinta_task_widget_info" />
         </receiver>
+
+        <receiver
+            android:name=".TintaCalendarWidgetProvider"
+            android:exported="true"
+            android:label="@string/widget_calendar_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.intent.action.DATE_CHANGED" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/tinta_calendar_widget_info" />
+        </receiver>
     </application>`;
 
   manifest = manifest.replace('</application>', widgetReceivers);
@@ -111,6 +125,8 @@ writeFileEnsureDir(
     <string name="widget_capture_desc">Crea recordatorios por teclado o voz desde tu pantalla principal.</string>
     <string name="widget_task_name">Tinta · Tarea actual</string>
     <string name="widget_task_desc">Muestra tu recordatorio prioritario actual y permite completarlo en un toque.</string>
+    <string name="widget_calendar_name">Tinta · Calendario</string>
+    <string name="widget_calendar_desc">Mes actual con círculo rojo en hoy, días con recordatorios y barra del evento de la hora.</string>
 </resources>
 `
 );
@@ -163,7 +179,8 @@ const pillColors = {
   widget_pill_afternoon: '#0044CC',
   widget_pill_inbox: '#000000',
   widget_pill_urgent: '#CC0000',
-  widget_pill_salud: '#007A33'
+  widget_pill_saturno: '#6A0DAD',
+  widget_pill_musica: '#007A33'
 };
 
 for (const [name, hex] of Object.entries(pillColors)) {
@@ -173,6 +190,72 @@ for (const [name, hex] of Object.entries(pillColors)) {
 <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
     <solid android:color="${hex}" />
     <corners android:radius="10dp" />
+</shape>
+`
+  );
+}
+
+writeFileEnsureDir(
+  path.join(androidResDir, 'drawable', 'widget_day_clear.xml'),
+  `<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval">
+    <solid android:color="#00000000" />
+</shape>
+`
+);
+
+writeFileEnsureDir(
+  path.join(androidResDir, 'drawable', 'widget_day_today_circle.xml'),
+  `<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval">
+    <solid android:color="#CC0000" />
+</shape>
+`
+);
+
+writeFileEnsureDir(
+  path.join(androidResDir, 'drawable', 'widget_day_dot.xml'),
+  `<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval">
+    <solid android:color="#CC0000" />
+</shape>
+`
+);
+
+writeFileEnsureDir(
+  path.join(androidResDir, 'drawable', 'widget_day_dot_dark.xml'),
+  `<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval">
+    <solid android:color="#000000" />
+</shape>
+`
+);
+
+writeFileEnsureDir(
+  path.join(androidResDir, 'drawable', 'widget_event_bar.xml'),
+  `<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="#FFFFFF" />
+    <stroke android:width="2dp" android:color="#000000" />
+    <corners android:radius="11dp" />
+</shape>
+`
+);
+
+const chipColors = {
+  widget_time_chip_red: '#CC0000',
+  widget_time_chip_amber: '#D95F00',
+  widget_time_chip_blue: '#0044CC',
+  widget_time_chip_dark: '#000000'
+};
+
+for (const [name, hex] of Object.entries(chipColors)) {
+  writeFileEnsureDir(
+    path.join(androidResDir, 'drawable', `${name}.xml`),
+    `<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="${hex}" />
+    <corners android:radius="7dp" />
 </shape>
 `
   );
@@ -490,6 +573,227 @@ writeFileEnsureDir(
 `
 );
 
+const calRowsXml = Array.from({ length: 6 }, (_, row) => {
+  const cellsXml = Array.from({ length: 7 }, (_, col) => {
+    const idx = row * 7 + col;
+    return `        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:paddingTop="1dp"
+            android:paddingBottom="1dp">
+
+            <TextView
+                android:id="@+id/cal_d_${idx}"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:background="@drawable/widget_day_clear"
+                android:gravity="center"
+                android:includeFontPadding="false"
+                android:text=""
+                android:textColor="#000000"
+                android:textSize="11.5sp"
+                android:textStyle="bold" />
+
+            <ImageView
+                android:id="@+id/cal_dot_${idx}"
+                android:layout_width="4dp"
+                android:layout_height="4dp"
+                android:layout_marginTop="1dp"
+                android:contentDescription=""
+                android:src="@drawable/widget_day_dot_dark"
+                android:visibility="invisible" />
+        </LinearLayout>`;
+  }).join('\n');
+
+  return `    <LinearLayout
+        android:id="@+id/cal_row_${row}"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+${cellsXml}
+    </LinearLayout>`;
+}).join('\n\n');
+
+const weekdayHeadersXml = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
+  .map(
+    (letter) => `        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="${letter}"
+            android:textColor="#000000"
+            android:textSize="11sp"
+            android:textStyle="bold" />`
+  )
+  .join('\n');
+
+writeFileEnsureDir(
+  path.join(androidResDir, 'layout', 'widget_calendar.xml'),
+  `<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_cal_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_card_bg"
+    android:orientation="vertical"
+    android:paddingStart="12dp"
+    android:paddingTop="10dp"
+    android:paddingEnd="12dp"
+    android:paddingBottom="9dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingBottom="5dp">
+
+        <TextView
+            android:id="@+id/widget_cal_month"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="Calendario"
+            android:textColor="#000000"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/widget_cal_today_count"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="6dp"
+            android:background="@drawable/widget_count_pill"
+            android:paddingStart="7dp"
+            android:paddingTop="1dp"
+            android:paddingEnd="7dp"
+            android:paddingBottom="1dp"
+            android:text="0 hoy"
+            android:textColor="#000000"
+            android:textSize="10.5sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:id="@+id/widget_cal_add_btn"
+            android:layout_width="26dp"
+            android:layout_height="26dp"
+            android:background="@drawable/widget_btn_outline"
+            android:gravity="center">
+
+            <ImageView
+                android:layout_width="13dp"
+                android:layout_height="13dp"
+                android:contentDescription="Añadir"
+                android:src="@drawable/ic_widget_plus" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingTop="1dp"
+        android:paddingBottom="4dp">
+${weekdayHeadersXml}
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginBottom="3dp"
+        android:background="#000000" />
+
+    <LinearLayout
+        android:id="@+id/widget_cal_grid"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical">
+${calRowsXml}
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="4dp"
+        android:background="#000000" />
+
+    <LinearLayout
+        android:id="@+id/widget_cal_event_bar"
+        android:layout_width="match_parent"
+        android:layout_height="30dp"
+        android:layout_marginTop="5dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="2dp"
+        android:paddingEnd="2dp">
+
+        <TextView
+            android:id="@+id/widget_cal_event_time"
+            android:layout_width="wrap_content"
+            android:layout_height="21dp"
+            android:background="@drawable/widget_time_chip_red"
+            android:gravity="center"
+            android:includeFontPadding="false"
+            android:paddingStart="7dp"
+            android:paddingEnd="7dp"
+            android:text="AHORA"
+            android:textColor="#FFFFFF"
+            android:textSize="10.5sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/widget_cal_event_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="7dp"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="Sin eventos esta hora"
+            android:textColor="#000000"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/widget_cal_event_more"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="5dp"
+            android:text=""
+            android:textColor="#000000"
+            android:textSize="10.5sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+    </LinearLayout>
+</LinearLayout>
+`
+);
+
+writeFileEnsureDir(
+  path.join(androidResDir, 'xml', 'tinta_calendar_widget_info.xml'),
+  `<?xml version="1.0" encoding="utf-8"?>
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/widget_calendar_desc"
+    android:initialLayout="@layout/widget_calendar"
+    android:minWidth="250dp"
+    android:minHeight="200dp"
+    android:resizeMode="horizontal|vertical"
+    android:targetCellWidth="4"
+    android:targetCellHeight="3"
+    android:updatePeriodMillis="1800000"
+    android:widgetCategory="home_screen" />
+`
+);
+
 // 4. Clases Java nativas: MainActivity, TintaNativePlugin, TintaWidgetUpdater y los 2 WidgetProviders
 writeFileEnsureDir(
   path.join(javaPkgDir, 'MainActivity.java'),
@@ -569,7 +873,7 @@ public class TintaNativePlugin extends Plugin {
         Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "es-ES");
-        intent.putExtra(RecognizerIntent.EXTRA_PROMPT, "Di tu recordatorio (ej: Salud cita 17:30)");
+        intent.putExtra(RecognizerIntent.EXTRA_PROMPT, "Di tu recordatorio (ej: Saturno revisar 17:30)");
         intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1);
 
         try {
@@ -662,14 +966,47 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Color;
 import android.os.Build;
 import android.view.View;
 import android.widget.RemoteViews;
+import java.util.Calendar;
+import java.util.HashSet;
+import java.util.Locale;
+import java.util.Set;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 public class TintaWidgetUpdater {
     public static final String ACTION_COMPLETE_CURRENT = "com.tinta.eink.ACTION_COMPLETE_CURRENT";
+
+    private static final String[] MONTH_NAMES_ES = {
+        "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+        "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+    };
+
+    private static final int[] CAL_ROW_IDS = {
+        R.id.cal_row_0, R.id.cal_row_1, R.id.cal_row_2,
+        R.id.cal_row_3, R.id.cal_row_4, R.id.cal_row_5
+    };
+
+    private static final int[] CAL_DAY_IDS = {
+        R.id.cal_d_0, R.id.cal_d_1, R.id.cal_d_2, R.id.cal_d_3, R.id.cal_d_4, R.id.cal_d_5, R.id.cal_d_6,
+        R.id.cal_d_7, R.id.cal_d_8, R.id.cal_d_9, R.id.cal_d_10, R.id.cal_d_11, R.id.cal_d_12, R.id.cal_d_13,
+        R.id.cal_d_14, R.id.cal_d_15, R.id.cal_d_16, R.id.cal_d_17, R.id.cal_d_18, R.id.cal_d_19, R.id.cal_d_20,
+        R.id.cal_d_21, R.id.cal_d_22, R.id.cal_d_23, R.id.cal_d_24, R.id.cal_d_25, R.id.cal_d_26, R.id.cal_d_27,
+        R.id.cal_d_28, R.id.cal_d_29, R.id.cal_d_30, R.id.cal_d_31, R.id.cal_d_32, R.id.cal_d_33, R.id.cal_d_34,
+        R.id.cal_d_35, R.id.cal_d_36, R.id.cal_d_37, R.id.cal_d_38, R.id.cal_d_39, R.id.cal_d_40, R.id.cal_d_41
+    };
+
+    private static final int[] CAL_DOT_IDS = {
+        R.id.cal_dot_0, R.id.cal_dot_1, R.id.cal_dot_2, R.id.cal_dot_3, R.id.cal_dot_4, R.id.cal_dot_5, R.id.cal_dot_6,
+        R.id.cal_dot_7, R.id.cal_dot_8, R.id.cal_dot_9, R.id.cal_dot_10, R.id.cal_dot_11, R.id.cal_dot_12, R.id.cal_dot_13,
+        R.id.cal_dot_14, R.id.cal_dot_15, R.id.cal_dot_16, R.id.cal_dot_17, R.id.cal_dot_18, R.id.cal_dot_19, R.id.cal_dot_20,
+        R.id.cal_dot_21, R.id.cal_dot_22, R.id.cal_dot_23, R.id.cal_dot_24, R.id.cal_dot_25, R.id.cal_dot_26, R.id.cal_dot_27,
+        R.id.cal_dot_28, R.id.cal_dot_29, R.id.cal_dot_30, R.id.cal_dot_31, R.id.cal_dot_32, R.id.cal_dot_33, R.id.cal_dot_34,
+        R.id.cal_dot_35, R.id.cal_dot_36, R.id.cal_dot_37, R.id.cal_dot_38, R.id.cal_dot_39, R.id.cal_dot_40, R.id.cal_dot_41
+    };
 
     private static int immutableFlag() {
         int flags = PendingIntent.FLAG_UPDATE_CURRENT;
@@ -697,6 +1034,10 @@ public class TintaWidgetUpdater {
         int[] taskIds = manager.getAppWidgetIds(new ComponentName(context, TintaTaskWidgetProvider.class));
         if (taskIds != null && taskIds.length > 0) {
             updateTaskWidgets(context, manager, taskIds);
+        }
+        int[] calIds = manager.getAppWidgetIds(new ComponentName(context, TintaCalendarWidgetProvider.class));
+        if (calIds != null && calIds.length > 0) {
+            updateCalendarWidgets(context, manager, calIds);
         }
     }
 
@@ -757,7 +1098,7 @@ public class TintaWidgetUpdater {
                 String title = current.optString("title", "Recordatorio");
                 String section = current.optString("section", "inbox");
                 String dueTime = current.optString("dueTime", "");
-                String category = current.optString("category", "none");
+                String category = current.optString("category", "otros");
                 boolean priority = current.optBoolean("priority", false);
 
                 String secLabel = "morning".equals(section) ? "MAÑANA" : "afternoon".equals(section) ? "TARDE" : "PENDIENTES";
@@ -766,8 +1107,12 @@ public class TintaWidgetUpdater {
                 int badgeBg = R.drawable.widget_pill_inbox;
                 if (priority || "trabajo".equals(category)) {
                     badgeBg = R.drawable.widget_pill_urgent;
-                } else if ("salud".equals(category)) {
-                    badgeBg = R.drawable.widget_pill_salud;
+                } else if ("saturno".equals(category)) {
+                    badgeBg = R.drawable.widget_pill_saturno;
+                } else if ("musica".equals(category)) {
+                    badgeBg = R.drawable.widget_pill_musica;
+                } else if ("personal".equals(category)) {
+                    badgeBg = R.drawable.widget_pill_afternoon;
                 } else if ("morning".equals(section)) {
                     badgeBg = R.drawable.widget_pill_morning;
                 } else if ("afternoon".equals(section)) {
@@ -776,14 +1121,17 @@ public class TintaWidgetUpdater {
 
                 StringBuilder meta = new StringBuilder();
                 if (priority) meta.append("! Urgente");
-                if (!"none".equals(category) && !category.isEmpty()) {
+                if (!category.isEmpty() && !"none".equals(category)) {
                     if (meta.length() > 0) meta.append(" · ");
-                    meta.append(Character.toUpperCase(category.charAt(0))).append(category.substring(1));
+                    String catDisplay = "musica".equals(category)
+                        ? "Música"
+                        : Character.toUpperCase(category.charAt(0)) + category.substring(1);
+                    meta.append(catDisplay);
                 }
                 int remaining = Math.max(0, activeCount - 1);
                 if (remaining > 0) {
                     if (meta.length() > 0) meta.append(" · ");
-                    meta.append("+").append(remaining).append(remaining == 1 ? " más" : " más");
+                    meta.append("+").append(remaining).append(" más");
                 }
                 if (meta.length() == 0) {
                     meta.append("Toca la tarjeta para editar");
@@ -795,6 +1143,212 @@ public class TintaWidgetUpdater {
                 views.setTextViewText(R.id.widget_task_meta, meta.toString());
                 views.setTextViewText(R.id.widget_task_hint, "Pulsa Hecho para pasar al siguiente");
                 views.setViewVisibility(R.id.widget_task_done_btn, View.VISIBLE);
+            }
+
+            manager.updateAppWidget(widgetId, views);
+        }
+    }
+
+    private static int parseTimeToMinutes(String hhmm) {
+        if (hhmm == null || hhmm.length() < 4 || !hhmm.contains(":")) return -1;
+        try {
+            String[] parts = hhmm.split(":");
+            int h = Integer.parseInt(parts[0].trim());
+            int m = Integer.parseInt(parts[1].trim());
+            if (h < 0 || h > 23 || m < 0 || m > 59) return -1;
+            return h * 60 + m;
+        } catch (Exception ignored) {
+            return -1;
+        }
+    }
+
+    public static void updateCalendarWidgets(Context context, AppWidgetManager manager, int[] widgetIds) {
+        SharedPreferences prefs = context.getSharedPreferences(TintaNativePlugin.PREFS_NAME, Context.MODE_PRIVATE);
+        String tasksRaw = prefs.getString(TintaNativePlugin.KEY_TASKS_JSON, "[]");
+
+        Calendar now = Calendar.getInstance();
+        int year = now.get(Calendar.YEAR);
+        int month = now.get(Calendar.MONTH); // 0..11
+        int todayDay = now.get(Calendar.DAY_OF_MONTH);
+        int nowHour = now.get(Calendar.HOUR_OF_DAY);
+        int nowMinute = now.get(Calendar.MINUTE);
+        int nowMins = nowHour * 60 + nowMinute;
+        String todayStr = String.format(Locale.ROOT, "%04d-%02d-%02d", year, month + 1, todayDay);
+
+        Set<String> datesWithTasks = new HashSet<>();
+        Set<String> urgentDates = new HashSet<>();
+
+        int todayCount = 0;
+        JSONObject currentHourTask = null;
+        int currentHourDiff = Integer.MAX_VALUE;
+        JSONObject nextUpcomingTask = null;
+        int nextUpcomingMins = Integer.MAX_VALUE;
+        JSONObject latestOverdueTask = null;
+        int latestOverdueMins = -1;
+        JSONObject fallbackTodayTask = null;
+
+        try {
+            JSONArray arr = new JSONArray(tasksRaw);
+            for (int i = 0; i < arr.length(); i++) {
+                JSONObject item = arr.optJSONObject(i);
+                if (item == null) continue;
+                String dueDate = item.optString("dueDate", "");
+                String dueTime = item.optString("dueTime", "");
+                String section = item.optString("section", "inbox");
+                boolean priority = item.optBoolean("priority", false);
+
+                if (!dueDate.isEmpty()) {
+                    datesWithTasks.add(dueDate);
+                    if (priority || dueDate.compareTo(todayStr) < 0) {
+                        urgentDates.add(dueDate);
+                    }
+                } else if (!"inbox".equals(section) || !dueTime.isEmpty()) {
+                    datesWithTasks.add(todayStr);
+                    if (priority) urgentDates.add(todayStr);
+                }
+
+                boolean isPastOrToday = dueDate.isEmpty() || dueDate.compareTo(todayStr) <= 0;
+                if (!isPastOrToday) continue;
+
+                todayCount++;
+                boolean isTodayTask = dueDate.isEmpty() || todayStr.equals(dueDate);
+                int tMins = parseTimeToMinutes(dueTime);
+
+                if (isTodayTask && tMins >= 0) {
+                    int diff = Math.abs(tMins - nowMins);
+                    if (diff <= 59 && diff < currentHourDiff) {
+                        currentHourDiff = diff;
+                        currentHourTask = item;
+                    }
+                    if (tMins >= nowMins && tMins < nextUpcomingMins) {
+                        nextUpcomingMins = tMins;
+                        nextUpcomingTask = item;
+                    }
+                    if (tMins < nowMins && tMins > latestOverdueMins) {
+                        latestOverdueMins = tMins;
+                        latestOverdueTask = item;
+                    }
+                }
+
+                if (fallbackTodayTask == null) {
+                    fallbackTodayTask = item;
+                } else if (isTodayTask) {
+                    String wantedSec = nowHour < 14 ? "morning" : "afternoon";
+                    if (wantedSec.equals(section) && !wantedSec.equals(fallbackTodayTask.optString("section", ""))) {
+                        fallbackTodayTask = item;
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+        }
+
+        JSONObject chosenEvent = currentHourTask != null
+            ? currentHourTask
+            : (nextUpcomingTask != null ? nextUpcomingTask : (latestOverdueTask != null ? latestOverdueTask : fallbackTodayTask));
+
+        Calendar firstOfMonth = Calendar.getInstance();
+        firstOfMonth.set(year, month, 1, 12, 0, 0);
+        int firstDow = firstOfMonth.get(Calendar.DAY_OF_WEEK); // Sun=1, Mon=2..Sat=7
+        int offset = (firstDow - Calendar.MONDAY + 7) % 7; // 0=Mon..6=Sun
+        int daysInMonth = firstOfMonth.getActualMaximum(Calendar.DAY_OF_MONTH);
+        boolean needsSixRows = (offset + daysInMonth) > 35;
+
+        String monthHeader = MONTH_NAMES_ES[month] + " " + year;
+        String todayCountLabel = todayCount == 1 ? "1 hoy" : todayCount + " hoy";
+
+        for (int widgetId : widgetIds) {
+            RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_calendar);
+            views.setTextViewText(R.id.widget_cal_month, monthHeader);
+            views.setTextViewText(R.id.widget_cal_today_count, todayCountLabel);
+            views.setOnClickPendingIntent(R.id.widget_cal_grid, createAppLaunchIntent(context, "", 301));
+            views.setOnClickPendingIntent(R.id.widget_cal_event_bar, createAppLaunchIntent(context, "", 302));
+            views.setOnClickPendingIntent(R.id.widget_cal_add_btn, createAppLaunchIntent(context, "quick_type", 303));
+
+            views.setViewVisibility(CAL_ROW_IDS[5], needsSixRows ? View.VISIBLE : View.GONE);
+
+            for (int cell = 0; cell < 42; cell++) {
+                int dayNum = cell - offset + 1;
+                if (dayNum < 1 || dayNum > daysInMonth) {
+                    views.setTextViewText(CAL_DAY_IDS[cell], "");
+                    views.setInt(CAL_DAY_IDS[cell], "setBackgroundResource", R.drawable.widget_day_clear);
+                    views.setViewVisibility(CAL_DOT_IDS[cell], View.INVISIBLE);
+                    continue;
+                }
+
+                String cellIso = String.format(Locale.ROOT, "%04d-%02d-%02d", year, month + 1, dayNum);
+                boolean isToday = (dayNum == todayDay);
+                boolean hasTask = datesWithTasks.contains(cellIso);
+                boolean isUrgent = isToday || urgentDates.contains(cellIso);
+
+                views.setTextViewText(CAL_DAY_IDS[cell], String.valueOf(dayNum));
+                if (isToday) {
+                    views.setInt(CAL_DAY_IDS[cell], "setBackgroundResource", R.drawable.widget_day_today_circle);
+                    views.setTextColor(CAL_DAY_IDS[cell], Color.WHITE);
+                } else {
+                    views.setInt(CAL_DAY_IDS[cell], "setBackgroundResource", R.drawable.widget_day_clear);
+                    views.setTextColor(CAL_DAY_IDS[cell], Color.parseColor("#000000"));
+                }
+
+                if (hasTask) {
+                    views.setImageViewResource(
+                        CAL_DOT_IDS[cell],
+                        isUrgent ? R.drawable.widget_day_dot : R.drawable.widget_day_dot_dark
+                    );
+                    views.setViewVisibility(CAL_DOT_IDS[cell], View.VISIBLE);
+                } else {
+                    views.setViewVisibility(CAL_DOT_IDS[cell], View.INVISIBLE);
+                }
+            }
+
+            if (chosenEvent == null) {
+                String clockNow = String.format(Locale.ROOT, "%02d:%02d", nowHour, nowMinute);
+                views.setInt(R.id.widget_cal_event_time, "setBackgroundResource", R.drawable.widget_time_chip_dark);
+                views.setTextViewText(R.id.widget_cal_event_time, clockNow);
+                views.setTextViewText(R.id.widget_cal_event_title, "Sin eventos esta hora");
+                views.setViewVisibility(R.id.widget_cal_event_more, View.GONE);
+            } else {
+                String evTitle = chosenEvent.optString("title", "Recordatorio");
+                String evTime = chosenEvent.optString("dueTime", "");
+                String evDate = chosenEvent.optString("dueDate", "");
+                String evSection = chosenEvent.optString("section", "inbox");
+                boolean evPriority = chosenEvent.optBoolean("priority", false);
+                int evMins = parseTimeToMinutes(evTime);
+
+                String chipLabel;
+                int chipBg;
+                if (!evTime.isEmpty()) {
+                    chipLabel = evTime;
+                    boolean isRightNow = (evMins >= 0 && Math.abs(evMins - nowMins) <= 59);
+                    boolean isPast = (!evDate.isEmpty() && evDate.compareTo(todayStr) < 0) || (evMins >= 0 && evMins < nowMins);
+                    if (isRightNow || isPast || evPriority) {
+                        chipBg = R.drawable.widget_time_chip_red;
+                    } else if (evMins < 14 * 60) {
+                        chipBg = R.drawable.widget_time_chip_amber;
+                    } else {
+                        chipBg = R.drawable.widget_time_chip_blue;
+                    }
+                } else if ("morning".equals(evSection)) {
+                    chipLabel = "MAÑ.";
+                    chipBg = R.drawable.widget_time_chip_amber;
+                } else if ("afternoon".equals(evSection)) {
+                    chipLabel = "TARDE";
+                    chipBg = R.drawable.widget_time_chip_blue;
+                } else {
+                    chipLabel = "PEND.";
+                    chipBg = evPriority ? R.drawable.widget_time_chip_red : R.drawable.widget_time_chip_dark;
+                }
+
+                views.setInt(R.id.widget_cal_event_time, "setBackgroundResource", chipBg);
+                views.setTextViewText(R.id.widget_cal_event_time, chipLabel);
+                views.setTextViewText(R.id.widget_cal_event_title, (evPriority ? "! " : "") + evTitle);
+
+                int extraCount = Math.max(0, todayCount - 1);
+                if (extraCount > 0) {
+                    views.setTextViewText(R.id.widget_cal_event_more, "+" + extraCount);
+                    views.setViewVisibility(R.id.widget_cal_event_more, View.VISIBLE);
+                } else {
+                    views.setViewVisibility(R.id.widget_cal_event_more, View.GONE);
+                }
             }
 
             manager.updateAppWidget(widgetId, views);
@@ -886,4 +1440,32 @@ public class TintaTaskWidgetProvider extends AppWidgetProvider {
 `
 );
 
-console.log('Clases Java y layouts XML de Widgets generados correctamente.');
+writeFileEnsureDir(
+  path.join(javaPkgDir, 'TintaCalendarWidgetProvider.java'),
+  `package com.tinta.eink;
+
+import android.appwidget.AppWidgetManager;
+import android.appwidget.AppWidgetProvider;
+import android.content.Context;
+import android.content.Intent;
+
+public class TintaCalendarWidgetProvider extends AppWidgetProvider {
+    @Override
+    public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
+        TintaWidgetUpdater.updateCalendarWidgets(context, appWidgetManager, appWidgetIds);
+    }
+
+    @Override
+    public void onReceive(Context context, Intent intent) {
+        super.onReceive(context, intent);
+        if (intent == null) return;
+        String action = intent.getAction();
+        if (Intent.ACTION_DATE_CHANGED.equals(action) || Intent.ACTION_TIMEZONE_CHANGED.equals(action)) {
+            TintaWidgetUpdater.updateAllWidgets(context);
+        }
+    }
+}
+`
+);
+
+console.log('Clases Java y layouts XML de Widgets (incluyendo Calendario) generados correctamente.');
